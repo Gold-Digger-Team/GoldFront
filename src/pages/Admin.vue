@@ -283,9 +283,18 @@ const inactiveCount = computed(() => rows.value.filter(r => r.status === 'inacti
 
 const aborter = ref(null);
 
-function authHeader() {
-  const auth = localStorage.getItem('admin_auth');
-  return auth ? { Authorization: `Basic ${auth}` } : {};
+// Fetch CSRF token untuk POST requests
+async function getCsrfToken() {
+  try {
+    const response = await fetch('/csrf-token', {
+      credentials: 'include',
+    });
+    const data = await response.json();
+    return data.csrfToken;
+  } catch (e) {
+    console.error('Error fetching CSRF token:', e);
+    return null;
+  }
 }
 
 function buildQuery(over = {}) {
@@ -311,7 +320,7 @@ async function fetchData() {
 
   try {
     const res = await fetch(`/api/admin/customers?${buildQuery()}`, {
-      headers: authHeader(),
+      credentials: 'include', // gunakan cookie untuk auth
       signal: aborter.value.signal,
     });
     if (!res.ok) {
@@ -355,9 +364,18 @@ async function sendEmail(c) {
   okMsg.value = "";
   sendingId.value = c.id;
   try {
+    const csrfToken = await getCsrfToken();
+    if (!csrfToken) {
+      throw new Error("Gagal mendapatkan CSRF token");
+    }
+
     const res = await fetch(`/api/admin/customers/${c.id}/email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeader() },
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      credentials: 'include',
       body: JSON.stringify({}),
     });
     const data = await res.json().catch(() => ({}));
@@ -382,7 +400,7 @@ function downloadCSV() {
   const qs = buildQuery({ page: undefined, limit: undefined });
   const url = `/api/admin/customers/export.csv?${qs}`;
 
-  fetch(url, { headers: authHeader() })
+  fetch(url, { credentials: 'include' })
     .then(async (res) => {
       if (!res.ok) {
         const t = await res.text();
@@ -414,19 +432,55 @@ function debouncedFetch() {
   debounceTimer = setTimeout(fetchData, 350);
 }
 
-function handleLogout() {
-  localStorage.removeItem('admin_auth');
-  localStorage.removeItem('admin_username');
-  router.push('/login');
+async function handleLogout() {
+  try {
+    const csrfToken = await getCsrfToken();
+    if (csrfToken) {
+      await fetch('/api/admin/logout', {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": csrfToken,
+        },
+        credentials: 'include',
+      });
+    }
+  } catch (e) {
+    console.error('Logout error:', e);
+  } finally {
+    // Clear localStorage dan redirect ke login
+    localStorage.removeItem('admin_user');
+    localStorage.removeItem('admin_username');
+    localStorage.removeItem('admin_id');
+    router.push('/login');
+  }
 }
 
-onMounted(() => {
-  // Check if user is authenticated
-  const auth = localStorage.getItem('admin_auth');
-  if (!auth) {
+onMounted(async () => {
+  // Check if user is authenticated menggunakan cookie
+  // Coba fetch data user dari /api/admin/me
+  try {
+    const res = await fetch('/api/admin/me', {
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      // Jika tidak terautentikasi, redirect ke login
+      router.push('/login');
+      return;
+    }
+
+    const data = await res.json();
+    // Update username dari response
+    if (data.user && data.user.username) {
+      adminUsername.value = data.user.username;
+      localStorage.setItem('admin_username', data.user.username);
+    }
+
+    // Fetch customer data
+    fetchData();
+  } catch (e) {
+    console.error('Auth check error:', e);
     router.push('/login');
-    return;
   }
-  fetchData();
 });
 </script>

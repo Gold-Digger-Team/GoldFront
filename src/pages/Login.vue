@@ -135,7 +135,19 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+// Fetch CSRF token dari server
+const getCsrfToken = async () => {
+  try {
+    const response = await fetch('/csrf-token', {
+      credentials: 'include', // penting untuk cookie
+    })
+    const data = await response.json()
+    return data.csrfToken
+  } catch (e) {
+    console.error('Error fetching CSRF token:', e)
+    return null
+  }
+}
 
 const handleLogin = async () => {
   loading.value = true
@@ -143,16 +155,26 @@ const handleLogin = async () => {
   success.value = ''
 
   try {
-    const response = await fetch(`${API_URL}/api/auth/login`, {
+    // Ambil CSRF token terlebih dahulu
+    const csrfToken = await getCsrfToken()
+
+    if (!csrfToken) {
+      error.value = 'Gagal mendapatkan CSRF token. Pastikan backend sudah berjalan.'
+      loading.value = false
+      return
+    }
+
+    const response = await fetch('/api/admin/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
       },
       body: JSON.stringify({
         username: username.value,
         password: password.value,
       }),
-      credentials: 'include', // untuk menyimpan cookie
+      credentials: 'include', // untuk menyimpan cookie JWT
     })
 
     const data = await response.json()

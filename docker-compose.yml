@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gold-digger-frontend
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - gold-digger-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Uncomment this if you want to include backend in the same docker-compose
+  # backend:
+  #   build:
+  #     context: ../backend
+  #     dockerfile: Dockerfile
+  #   container_name: gold-digger-backend
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - DATABASE_URL=your_database_url
+  #   networks:
+  #     - gold-digger-network
+  #   restart: unless-stopped
+
+networks:
+  gold-digger-network:
+    driver: bridge

@@ -47,14 +47,39 @@
           />
         </TransitionGroup>
 
+        <!-- Overlay Gradient -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+
+        <!-- Navigation Arrows -->
+        <button
+          @click="prevBanner"
+          class="absolute left-6 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-xl backdrop-blur transition-all hover:bg-white hover:scale-110 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          aria-label="Banner sebelumnya"
+        >
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          @click="nextBanner"
+          class="absolute right-6 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-xl backdrop-blur transition-all hover:bg-white hover:scale-110 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          aria-label="Banner berikutnya"
+        >
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
         <!-- Navigation Dots -->
         <div class="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
           <button
             v-for="(_, index) in banners"
             :key="index"
             @click="currentBannerIndex = index"
-            class="h-2 w-2 rounded-full transition-all duration-300"
-            :class="currentBannerIndex === index ? 'bg-teal-600 w-8' : 'bg-slate-400 hover:bg-slate-500'"
+            class="transition-all duration-300"
+            :class="currentBannerIndex === index
+              ? 'h-2.5 w-10 rounded-full bg-white shadow-lg'
+              : 'h-2.5 w-2.5 rounded-full bg-white/60 hover:bg-white/90'"
             :aria-label="`Go to banner ${index + 1}`"
           ></button>
         </div>
@@ -67,7 +92,7 @@
       <BSIGoldHero />
 
       <!-- === 3 Info Cards === -->
-      <section class="grid gap-6 md:grid-cols-3">
+      <section class="grid gap-4 md:grid-cols-3">
         <InfoCard
           type="price"
           title="Harga Emas Saat Ini"
@@ -120,10 +145,10 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import BSIGoldHero from '../components/BSIGoldHero.vue'
 import InfoCard from '../components/sections/InfoCard.vue'
 import SidebarMenu from '../components/sections/SidebarMenu.vue'
 import AppFooter from '../components/AppFooter.vue'
-import BSIGoldHero from '../components/BSIGoldHero.vue'
 import HargaEmas from './HargaEmas.vue'
 import PrediksiKeuntungan from './PrediksiKeuntungan.vue'
 import KalkulatorCicilEmas from './KalkulatorCicilEmas.vue'
@@ -149,6 +174,18 @@ const stopBannerSlider = () => {
     clearInterval(bannerInterval)
     bannerInterval = null
   }
+}
+
+const nextBanner = () => {
+  currentBannerIndex.value = (currentBannerIndex.value + 1) % banners.length
+  stopBannerSlider()
+  startBannerSlider()
+}
+
+const prevBanner = () => {
+  currentBannerIndex.value = (currentBannerIndex.value - 1 + banners.length) % banners.length
+  stopBannerSlider()
+  startBannerSlider()
 }
 
 const sections = [

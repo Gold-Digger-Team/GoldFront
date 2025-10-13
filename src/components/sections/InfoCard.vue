@@ -1,43 +1,37 @@
 <!-- src/components/sections/InfoCard.vue -->
 <template>
   <article
-    class="relative overflow-hidden rounded-[20px] p-6 shadow-lg transition-all duration-300 hover:shadow-xl"
-    :class="bgGradient"
+    class="rounded-xl border-3 p-4 shadow-sm transition-all duration-300 hover:shadow-md"
+    :class="cardStyles"
   >
-    <!-- Icon Background Circle -->
-    <div
-      class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10"
-      :class="iconBgColor"
-    ></div>
-
     <!-- Content Wrapper with Flexbox -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <!-- Icon -->
       <div
-        class="flex-shrink-0 rounded-full p-3"
+        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
         :class="iconBgColor"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          stroke-width="2"
+          stroke-width="2.5"
           stroke="currentColor"
-          class="h-8 w-8"
+          class="h-5 w-5"
           :class="iconColor"
           v-html="iconPath"
         />
       </div>
 
       <!-- Text Content -->
-      <div class="flex-1">
+      <div class="flex-1 min-w-0">
         <!-- Title -->
-        <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide" :class="titleColor">
+        <h3 class="text-xs font-semibold md:text-sm" :class="titleColor">
           {{ title }}
         </h3>
 
         <!-- Value -->
-        <p class="text-xl font-bold leading-tight" :class="valueColor">
+        <p class="mt-0.5 text-base font-bold md:text-lg truncate" :class="valueColor">
           {{ value }}
         </p>
       </div>
@@ -61,51 +55,51 @@ const props = defineProps({
 // Icon paths as SVG path strings
 const iconPath = computed(() => {
   const icons = {
-    price: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
-    projection: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />',
-    growth: '<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />',
+    price: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>',
+    projection: '<path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>',
+    growth: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>',
     default: '<path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />'
   }
 
   return icons[props.type] || icons.default
 })
 
-// Styling based on card type
-const bgGradient = computed(() => {
-  const gradients = {
-    price: 'bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 border-2 border-amber-200',
-    projection: 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100 border-2 border-teal-200',
-    growth: 'bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border-2 border-emerald-200',
-    default: 'bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200'
+// Styling based on card type (Yellow, Purple, Gray)
+const cardStyles = computed(() => {
+  const styles = {
+    price: 'bg-yellow-50 border-yellow-400',
+    projection: 'bg-purple-50 border-purple-400',
+    growth: 'bg-gray-100 border-gray-400',
+    default: 'bg-slate-50 border-slate-300'
   }
-  return gradients[props.type] || gradients.default
+  return styles[props.type] || styles.default
 })
 
 const iconBgColor = computed(() => {
   const colors = {
-    price: 'bg-amber-100',
-    projection: 'bg-teal-100',
-    growth: 'bg-emerald-100',
-    default: 'bg-slate-100'
+    price: 'bg-yellow-400',
+    projection: 'bg-purple-400',
+    growth: 'bg-gray-300',
+    default: 'bg-slate-300'
   }
   return colors[props.type] || colors.default
 })
 
 const iconColor = computed(() => {
   const colors = {
-    price: 'text-amber-600',
-    projection: 'text-teal-600',
-    growth: 'text-emerald-600',
-    default: 'text-slate-600'
+    price: 'text-yellow-700',
+    projection: 'text-purple-700',
+    growth: 'text-gray-700',
+    default: 'text-slate-700'
   }
   return colors[props.type] || colors.default
 })
 
 const titleColor = computed(() => {
   const colors = {
-    price: 'text-amber-700',
-    projection: 'text-teal-700',
-    growth: 'text-emerald-700',
+    price: 'text-yellow-700',
+    projection: 'text-purple-700',
+    growth: 'text-gray-700',
     default: 'text-slate-700'
   }
   return colors[props.type] || colors.default
@@ -113,10 +107,10 @@ const titleColor = computed(() => {
 
 const valueColor = computed(() => {
   const colors = {
-    price: 'text-amber-900',
-    projection: 'text-teal-900',
-    growth: 'text-emerald-900',
-    default: 'text-slate-900'
+    price: 'text-yellow-600',
+    projection: 'text-purple-600',
+    growth: 'text-gray-600',
+    default: 'text-slate-600'
   }
   return colors[props.type] || colors.default
 })

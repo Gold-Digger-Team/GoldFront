@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../assets/fonts/PlusJakartaSans-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../assets/fonts/PlusJakartaSans-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 800;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* ====== Design Tokens (mapping dari Figma) ====== */
 @theme {
   --color-primary:        #1DA69D;   /* hijau BSI */
@@ -24,3 +40,7 @@
 .card          { @apply bg-white border border-[--color-border] rounded-[--radius-xl] shadow-[--shadow-soft] p-5; }
 .kpi-card      { @apply rounded-xl border-[5px] p-5 bg-white text-center shadow; border-color: var(--color-gold); }
 .badge-pill    { @apply rounded-b-[30px] text-white text-center py-2 mx-auto; background: linear-gradient(90deg,var(--color-gold-light) 0%, var(--color-gold) 100%); }
+
+body {
+  font-family: var(--font-sans);
+}

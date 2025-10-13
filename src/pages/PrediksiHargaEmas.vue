@@ -45,7 +45,7 @@
         </p>
         <p class="mt-1.5 text-xl font-semibold">{{ formatCurrency(projection.latest) }}</p>
         <p class="mt-1 text-xs text-slate-500">
-          Perubahan {{ formatChange(projection.growth) }} vs awal periode
+          Perubahan {{ formatChange(projection.growth) }} 
         </p>
       </div>
     </div>

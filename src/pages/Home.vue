@@ -274,7 +274,7 @@ const ensurePriceCsrfToken = async () => {
     return priceCsrfToken.value
   }
 
-  const endpoints = ['get-csrf', 'csrf-token']
+  const endpoints = ['csrf-token']
   for (const endpoint of endpoints) {
     try {
       const tokenRes = await fetch(`http://192.168.23.22:3001/${endpoint}`, {

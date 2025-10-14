@@ -425,7 +425,7 @@ async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
     if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://192.168.23.22:3001/get-csrf', {
+      const tokenRes = await fetch('http://192.168.23.22:3001/csrf-token', {
         method: 'GET',
         credentials: 'include'
       })

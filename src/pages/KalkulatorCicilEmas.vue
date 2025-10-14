@@ -156,11 +156,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 
-const API_BASE = 'http://localhost:3001'
+const API_BASE = 'http://192.168.23.22:3001'
 
 // Income & Expense
-const income = ref(7_000_000)
-const expense = ref(4_000_000)
+const income = ref(0)
+const expense = ref(0)
 const baseDisposable = computed(() => Math.max((income.value || 0) - (expense.value || 0), 0))
 const serverDisposable = ref(null)
 const disposableIncome = computed(() => serverDisposable.value ?? baseDisposable.value)

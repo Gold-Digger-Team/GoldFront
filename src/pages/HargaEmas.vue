@@ -269,7 +269,7 @@ async function fetchGoldPriceData() {
 
     // Fetch all pages
     while (currentPage <= totalPages) {
-      const response = await fetch(`http://localhost:3001/api/emas?page=${currentPage}&pageSize=100`, {
+      const response = await fetch(`http://192.168.23.22:3001/api/emas?page=${currentPage}&pageSize=100`, {
         method: 'GET'
       })
 

@@ -345,7 +345,7 @@ async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
     if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://localhost:3001/get-csrf', {
+      const tokenRes = await fetch('http://192.168.23.22:3001/get-csrf', {
         method: 'GET',
         credentials: 'include'
       })
@@ -366,7 +366,7 @@ async function fetchGoldPrice() {
       }
     }
 
-    const response = await fetch('http://localhost:3001/api/emas/today', {
+    const response = await fetch('http://192.168.23.22:3001/api/emas/today', {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -524,7 +524,7 @@ const formatNumber = (n) =>
 
 const ensureSimulationCsrf = async () => {
   if (simulationCsrfToken.value) return simulationCsrfToken.value
-  const res = await fetch('http://localhost:3001/csrf-token', {
+  const res = await fetch('http://192.168.23.22:3001/csrf-token', {
     method: 'GET',
     credentials: 'include'
   })
@@ -559,7 +559,7 @@ const fetchSimulation = async () => {
       dp_pct: dpNominalBase.value
     }
 
-    const res = await fetch('http://localhost:3001/api/simulasi/simulasi-cilem', {
+    const res = await fetch('http://192.168.23.22:3001/api/simulasi/simulasi-cilem', {
       method: 'POST',
       credentials: 'include',
       headers: {

@@ -425,7 +425,7 @@ async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
     if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://localhost:3001/get-csrf', {
+      const tokenRes = await fetch('http://192.168.23.22:3001/get-csrf', {
         method: 'GET',
         credentials: 'include'
       })
@@ -443,7 +443,7 @@ async function fetchGoldPrice() {
       }
     }
 
-    const response = await fetch('http://localhost:3001/api/emas/today', {
+    const response = await fetch('http://192.168.23.22:3001/api/emas/today', {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -544,7 +544,7 @@ const formattedTotalPriceClass = computed(() => {
 // Functions
 async function getCsrfToken() {
   try {
-    const response = await fetch('http://localhost:3001/csrf-token', {
+    const response = await fetch('http://192.168.23.22:3001/csrf-token', {
       method: 'GET',
       credentials: 'include'
     })
@@ -593,7 +593,7 @@ async function fetchPreview() {
       dp_pct: dpPct.value
     }
 
-    const response = await fetch('http://localhost:3001/api/forms/preview', {
+    const response = await fetch('http://192.168.23.22:3001/api/forms/preview', {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -727,7 +727,7 @@ const handleSubmit = async () => {
       }))
     }
 
-    const res = await fetch('http://localhost:3001/api/forms', {
+    const res = await fetch('http://192.168.23.22:3001/api/forms', {
       method: 'POST',
       credentials: 'include',
       headers: {

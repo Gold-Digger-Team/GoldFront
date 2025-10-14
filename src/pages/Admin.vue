@@ -348,7 +348,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-const API_BASE = 'http://localhost:3001'
+const API_BASE = 'http://192.168.23.22:3001'
 
 const router = useRouter()
 

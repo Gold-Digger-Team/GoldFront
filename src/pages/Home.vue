@@ -102,7 +102,7 @@
         />
       <InfoCard
         type="projection"
-        title="Proyeksi 1 Tahun"
+        title="Proyeksi 3 Tahun Ke Depan"
         :value="projectionText"
       />
         <InfoCard
@@ -258,46 +258,66 @@ const formatPercent = (value) => {
 }
 
 const yoyText = computed(() => {
-  if (goldPriceLoading.value || projectionLoading.value) return 'Memuat...'
-  if (goldPrice.value != null && projectionValue.value != null && projectionValue.value !== 0) {
-    const change = ((projectionValue.value - goldPrice.value) / projectionValue.value) * 100
-    return formatPercent(change)
-  }
+  if (yoyLoading.value) return 'Memuat...'
+  if (yoyError.value) return yoyError.value
+  if (yoyValue.value != null) return formatPercent(yoyValue.value)
   return 'Data tidak tersedia'
 })
 
-const priceCsrfToken = ref(null)
+const priceCsrfToken = ref(undefined)
+const yoyValue = ref(null)
+const yoyLoading = ref(false)
+const yoyError = ref('')
+
+const ensurePriceCsrfToken = async () => {
+  if (priceCsrfToken.value !== undefined) {
+    return priceCsrfToken.value
+  }
+
+  const endpoints = ['get-csrf', 'csrf-token']
+  for (const endpoint of endpoints) {
+    try {
+      const tokenRes = await fetch(`http://192.168.23.22:3001/${endpoint}`, {
+        method: 'GET',
+        credentials: 'include'
+      })
+      if (!tokenRes.ok) {
+        continue
+      }
+      const tokenData = await tokenRes.json().catch(() => ({}))
+      const token =
+        tokenData?.csrfToken ||
+        tokenData?.token ||
+        tokenData?.['csrf-token'] ||
+        tokenRes.headers.get('X-CSRF-Token')
+      if (token) {
+        priceCsrfToken.value = token
+        return token
+      }
+    } catch (error) {
+      console.warn(`Gagal mengambil token CSRF via ${endpoint}:`, error)
+    }
+  }
+
+  priceCsrfToken.value = null
+  return priceCsrfToken.value
+}
 
 const fetchGoldPrice = async () => {
   goldPriceLoading.value = true
   goldPriceError.value = ''
 
   try {
-    if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://localhost:3001/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
-      })
-      if (!tokenRes.ok) {
-        throw new Error(`Gagal mengambil token CSRF: ${tokenRes.status}`)
-      }
-      const tokenData = await tokenRes.json().catch(() => ({}))
-      priceCsrfToken.value =
-        tokenData?.csrfToken ||
-        tokenData?.token ||
-        tokenData?.['csrf-token'] ||
-        tokenRes.headers.get('X-CSRF-Token')
-      if (!priceCsrfToken.value) {
-        throw new Error('Token CSRF tidak ditemukan')
-      }
-    }
+    const token = await ensurePriceCsrfToken()
 
-    const priceRes = await fetch('http://localhost:3001/api/emas/today', {
+    const priceRes = await fetch('http://192.168.23.22:3001/api/emas/today', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'X-CSRF-Token': priceCsrfToken.value
-      }
+      headers: token
+        ? {
+            'X-CSRF-Token': token
+          }
+        : undefined
     })
 
     if (!priceRes.ok) {
@@ -322,7 +342,7 @@ const fetchProjection = async () => {
   projectionNote.value = ''
 
   try {
-    const res = await fetch('http://localhost:5001/predict', {
+    const res = await fetch('http://192.168.23.22:5001/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -339,7 +359,7 @@ const fetchProjection = async () => {
 
     const list = data?.prediction
     const firstPrediction = Array.isArray(list)
-      ? list[0]?.predicted_price ?? list[0]
+      ? list[2]?.predicted_price ?? list[2]
       : data?.prediction ?? data?.value ?? null
 
     if (typeof firstPrediction === 'number' && !Number.isNaN(firstPrediction)) {
@@ -358,10 +378,74 @@ const fetchProjection = async () => {
   }
 }
 
+const fetchHistoricalYoy = async () => {
+  yoyLoading.value = true
+  yoyError.value = ''
+
+  try {
+    const token = await ensurePriceCsrfToken()
+
+    const res = await fetch('http://192.168.23.22:3001/api/emas?page=1&pageSize=400', {
+      method: 'GET',
+      credentials: 'include',
+      headers: token ? { 'X-CSRF-Token': token } : undefined
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || `Gagal memuat data historis (${res.status})`)
+    }
+
+    const data = await res.json().catch(() => ({}))
+    const records = Array.isArray(data?.data) ? data.data : []
+    if (records.length < 2) {
+      throw new Error('Data historis tidak cukup')
+    }
+
+    const sorted = [...records].sort(
+      (a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime()
+    )
+    const latest = sorted[sorted.length - 1]
+    const latestPrice = parseFloat(latest?.harga_pergram_idr)
+    if (!Number.isFinite(latestPrice)) {
+      throw new Error('Data harga terbaru tidak valid')
+    }
+
+    const targetDate = new Date(latest.tanggal)
+    targetDate.setFullYear(targetDate.getFullYear() - 1)
+
+    let closest = null
+    let smallestDiff = Infinity
+    sorted.forEach((item) => {
+      const diff = Math.abs(new Date(item.tanggal).getTime() - targetDate.getTime())
+      if (diff < smallestDiff) {
+        smallestDiff = diff
+        closest = item
+      }
+    })
+
+    const previousPrice = parseFloat(closest?.harga_pergram_idr)
+    if (!Number.isFinite(previousPrice) || previousPrice === 0) {
+      throw new Error('Data harga tahun lalu tidak valid')
+    }
+
+    const change = ((latestPrice - previousPrice) / previousPrice) * 100
+    yoyValue.value = change
+    yoyError.value = ''
+  } catch (error) {
+    console.error('Fetch YoY historis gagal:', error)
+    yoyError.value = 'Data tidak tersedia'
+    yoyValue.value = null
+  } finally {
+    yoyLoading.value = false
+  }
+}
+
 onMounted(() => {
   startBannerSlider()
   fetchGoldPrice()
   fetchProjection()
+  fetchHistoricalYoy()
 })
 
 onUnmounted(() => {

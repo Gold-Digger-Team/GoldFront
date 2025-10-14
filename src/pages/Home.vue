@@ -5,7 +5,9 @@
       <div class="mx-auto flex max-w-7xl items-center justify-between px-8 py-3">
         <!-- Logo -->
         <div class="flex items-center">
-          <img src="/src/assets/BSI (Bank Syariah Indonesia) Logo.png" class="h-10 w-auto" alt="Bank Syariah Indonesia" />
+          <router-link to="/" aria-label="Beranda" class="inline-block">
+            <img src="/src/assets/BSI (Bank Syariah Indonesia) Logo.png" class="h-10 w-auto" alt="Bank Syariah Indonesia" />
+          </router-link>
         </div>
 
         <!-- Navigation Menu -->
@@ -96,13 +98,13 @@
         <InfoCard
           type="price"
           title="Harga Emas Saat Ini"
-          value="Rp 2.300.000/gram"
+          :value="priceCardText"
         />
-        <InfoCard
-          type="projection"
-          title="Proyeksi 1 Tahun"
-          value="Rp 2.700.000/gram"
-        />
+      <InfoCard
+        type="projection"
+        title="Proyeksi 1 Tahun"
+        :value="projectionText"
+      />
         <InfoCard
           type="growth"
           title="Year-on-year Growth"
@@ -130,6 +132,7 @@
               :is="activeSection.component"
               :key="activeSection.name"
               class="flex w-full flex-1"
+              @navigate-section="handleNavigateSection"
             />
           </KeepAlive>
         </div>
@@ -144,7 +147,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import BSIGoldHero from '../components/BSIGoldHero.vue'
 import InfoCard from '../components/sections/InfoCard.vue'
 import SidebarMenu from '../components/sections/SidebarMenu.vue'
@@ -201,8 +204,123 @@ const activeSection = computed(
   () => sections.find((section) => section.name === activeMenu.value) ?? sections[0]
 )
 
+const handleNavigateSection = (sectionName) => {
+  const target = sections.find((section) => section.name === sectionName)
+  if (!target) return
+
+  activeMenu.value = target.name
+
+  nextTick(() => {
+    const element = document.getElementById(target.slug)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
+
+const goldPrice = ref(null)
+const goldPriceLoading = ref(false)
+const goldPriceError = ref('')
+
+const projectionValue = ref(null)
+const projectionLoading = ref(false)
+const projectionError = ref('')
+const projectionNote = ref('')
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0
+  }).format(value)
+
+const priceCardText = computed(() => {
+  if (goldPriceLoading.value) return 'Memuat...'
+  if (goldPriceError.value) return 'Gagal memuat'
+  if (goldPrice.value != null) return `${formatCurrency(goldPrice.value)}/gram`
+  return 'Data tidak tersedia'
+})
+
+const projectionText = computed(() => {
+  if (projectionLoading.value) return 'Memuat...'
+  if (projectionValue.value != null) return `${formatCurrency(projectionValue.value)}/gram`
+  if (projectionError.value) return projectionError.value
+  return 'Data tidak tersedia'
+})
+const projectionMessage = computed(() => projectionNote.value)
+
+const fetchGoldPrice = async () => {
+  goldPriceLoading.value = true
+  goldPriceError.value = ''
+
+  try {
+    const priceRes = await fetch('http://localhost:3001/api/emas/today', {
+      method: 'GET'
+    })
+
+    if (!priceRes.ok) {
+      throw new Error(`Gagal mengambil harga emas: ${priceRes.status}`)
+    }
+
+    const priceData = await priceRes.json()
+    // Parse the string value to number
+    const hargaString = priceData?.harga_pergram_idr
+    goldPrice.value = hargaString ? parseFloat(hargaString) : null
+  } catch (error) {
+    console.error('Fetch harga emas gagal:', error)
+    goldPriceError.value = String(error.message || error)
+    goldPrice.value = null
+  } finally {
+    goldPriceLoading.value = false
+  }
+}
+
+const fetchProjection = async () => {
+  projectionLoading.value = true
+  projectionError.value = ''
+  projectionNote.value = ''
+
+  try {
+    const res = await fetch('http://localhost:5001/predict', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok && res.status !== 202) {
+      const text = data?.message || (await res.text())
+      throw new Error(text || `HTTP ${res.status}`)
+    }
+
+    const list = data?.prediction
+    const firstPrediction = Array.isArray(list)
+      ? list[0]?.predicted_price ?? list[0]
+      : data?.prediction ?? data?.value ?? null
+
+    if (typeof firstPrediction === 'number' && !Number.isNaN(firstPrediction)) {
+      projectionValue.value = firstPrediction
+      projectionError.value = ''
+      projectionNote.value = res.status === 202 ? (data?.message || '') : ''
+    } else {
+      throw new Error('Nilai prediksi tidak ditemukan')
+    }
+  } catch (error) {
+    console.error('Fetch proyeksi gagal:', error)
+    projectionError.value = String(error.message || error)
+    projectionValue.value = null
+  } finally {
+    projectionLoading.value = false
+  }
+}
+
 onMounted(() => {
   startBannerSlider()
+  fetchGoldPrice()
+  fetchProjection()
 })
 
 onUnmounted(() => {

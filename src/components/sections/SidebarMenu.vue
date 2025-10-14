@@ -31,7 +31,7 @@
           <button
             type="button"
             :class="[
-              'flex w-full items-center gap-3 rounded-full px-5 py-3 text-left text-sm transition focus:outline-none relative',
+              'flex w-full items-center gap-3 rounded-full px-5 py-3 text-left text-sm transition focus:outline-none relative z-20',
               name === activeLabel
                 ? 'text-transparent font-semibold'
                 : 'text-white/80 hover:bg-white/10 hover:text-white'

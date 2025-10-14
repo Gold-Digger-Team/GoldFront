@@ -38,7 +38,7 @@
     </div>
 
     <div class="mt-4 w-full" style="height: 240px;">
-      <apexchart type="area" height="240" :options="chartOptions" :series="chartSeries"></apexchart>
+      <apexchart type="line" height="240" :options="chartOptions" :series="chartSeries"></apexchart>
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -61,21 +61,32 @@
 <script setup>
 import { computed, ref } from 'vue'
 
+const seriesColors = ['#F9B10A', '#5DC1B4']
+
 const timeframeConfig = {
   '5Y': {
     label: '5Y',
     categories: ['2021', '2022', '2023', '2024', '2025'],
-    seriesData: [1_100_000, 1_400_000, 1_900_000, 2_800_000, 3_400_000]
+    series: [
+      { name: 'Harga BSI', data: [1_950_000, 2_350_000, 2_880_000, 3_050_000, 3_480_000] },
+      { name: 'Harga Nasional', data: [1_780_000, 2_120_000, 2_540_000, 2_820_000, 3_060_000] }
+    ]
   },
   '1Y': {
     label: '1Y',
     categories: ["Nov '23", "Jan '24", "Mar '24", "May '24", "Jul '24", "Sep '24", "Nov '24"],
-    seriesData: [1_520_000, 1_640_000, 1_720_000, 1_810_000, 1_880_000, 1_930_000, 1_980_000]
+    series: [
+      { name: 'Harga BSI', data: [2_820_000, 2_930_000, 3_040_000, 3_120_000, 3_280_000, 3_410_000, 3_520_000] },
+      { name: 'Harga Nasional', data: [2_700_000, 2_810_000, 2_940_000, 3_000_000, 3_120_000, 3_210_000, 3_340_000] }
+    ]
   },
   '1M': {
     label: '1M',
     categories: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'],
-    seriesData: [1_940_000, 1_955_000, 1_968_000, 1_982_000]
+    series: [
+      { name: 'Harga BSI', data: [3_450_000, 3_510_000, 3_560_000, 3_620_000] },
+      { name: 'Harga Nasional', data: [3_320_000, 3_370_000, 3_420_000, 3_460_000] }
+    ]
   }
 }
 
@@ -87,34 +98,40 @@ const baseOptions = {
     fontFamily: 'inherit',
     width: '100%'
   },
+  colors: seriesColors,
   dataLabels: { enabled: false },
   stroke: { curve: 'smooth', width: 3 },
-  colors: ['#FFB70F'],
+  markers: {
+    size: 0,
+    hover: { size: 7 }
+  },
+  legend: { show: false },
   xaxis: {
     categories: [],
     axisTicks: { show: false },
+    axisBorder: { show: false },
     labels: {
-      style: { colors: '#475569', fontWeight: 600 }
+      style: { colors: '#334155', fontWeight: 600 },
+      offsetY: 4
     }
   },
   yaxis: {
+    tickAmount: 4,
     labels: {
-      formatter: (v) => `${(v / 1_000_000).toFixed(0)} Jt`,
-      style: { colors: '#64748b' }
+      formatter: (v) => `${Math.round(v / 1_000_000)} Jt`,
+      style: { colors: '#475569', fontWeight: 600 }
     }
   },
   grid: {
     borderColor: '#C8F2EE',
-    strokeDashArray: 6
-  },
-  fill: {
-    type: 'gradient',
-    gradient: {
-      opacityFrom: 0.45,
-      opacityTo: 0.05
-    }
+    strokeDashArray: 4,
+    xaxis: { lines: { show: true } },
+    yaxis: { lines: { show: true } },
+    padding: { left: 12, right: 12 }
   },
   tooltip: {
+    shared: true,
+    intersect: false,
     y: {
       formatter: (v) =>
         new Intl.NumberFormat('id-ID', {
@@ -137,37 +154,53 @@ const selectedRange = ref(timeframeList.value[0]?.key ?? '5Y')
 
 const chartOptions = computed(() => {
   const active = timeframeConfig[selectedRange.value]
+  const allValues = active.series.flatMap((serie) => serie.data)
+  const min = Math.min(...allValues)
+  const max = Math.max(...allValues)
+  const padding = Math.max(80_000, Math.round((max - min) * 0.12))
 
   return {
     ...baseOptions,
     xaxis: {
       ...baseOptions.xaxis,
       categories: active.categories
+    },
+    yaxis: {
+      ...baseOptions.yaxis,
+      min: Math.max(0, min - padding),
+      max: max + padding
+    },
+    markers: {
+      ...baseOptions.markers,
+      discrete: [
+        {
+          seriesIndex: 0,
+          dataPointIndex: active.series[0].data.length - 1,
+          fillColor: '#FFFFFF',
+          strokeColor: seriesColors[0],
+          size: 8
+        }
+      ]
     }
   }
 })
 
-const chartSeries = computed(() => [
-  {
-    name: 'Harga Emas',
-    data: timeframeConfig[selectedRange.value].seriesData
-  }
-])
+const chartSeries = computed(() => timeframeConfig[selectedRange.value].series)
 
 const latestPrice = computed(() => {
-  const data = timeframeConfig[selectedRange.value].seriesData
+  const data = timeframeConfig[selectedRange.value].series[0].data
   return data[data.length - 1]
 })
 
 const headlineChange = computed(() => {
-  const data = timeframeConfig[selectedRange.value].seriesData
+  const data = timeframeConfig[selectedRange.value].series[0].data
   const first = data[0]
   const last = data[data.length - 1]
   return first === 0 ? 0 : (last - first) / first
 })
 
 const stats = computed(() => {
-  const data = timeframeConfig[selectedRange.value].seriesData
+  const data = timeframeConfig[selectedRange.value].series[0].data
   const min = Math.min(...data)
   const max = Math.max(...data)
   const avg = data.reduce((acc, val) => acc + val, 0) / data.length

@@ -55,21 +55,23 @@
 <script setup>
 import { computed, ref } from 'vue'
 
+const seriesColors = ['#F9B10A', '#5DC1B4']
+
 const timeframeConfig = {
   '3Y': {
     label: '3Y',
     categories: ['2025', '2026', '2027'],
     series: [
-      { name: 'Skenario A', data: [1_680_000, 1_820_000, 1_980_000] },
-      { name: 'Skenario B', data: [1_760_000, 1_940_000, 2_150_000] }
+      { name: 'Skenario Moderat', data: [2_050_000, 2_380_000, 2_750_000] },
+      { name: 'Skenario Optimistis', data: [2_250_000, 2_640_000, 3_080_000] }
     ]
   },
   '5Y': {
     label: '5Y',
     categories: ['2025', '2026', '2027', '2028', '2029'],
     series: [
-      { name: 'Skenario A', data: [1_600_000, 1_750_000, 1_920_000, 2_110_000, 2_320_000] },
-      { name: 'Skenario B', data: [1_700_000, 1_900_000, 2_120_000, 2_360_000, 2_620_000] }
+      { name: 'Skenario Moderat', data: [2_000_000, 2_260_000, 2_540_000, 2_860_000, 3_190_000] },
+      { name: 'Skenario Optimistis', data: [2_120_000, 2_450_000, 2_820_000, 3_270_000, 3_780_000] }
     ]
   },
   '10Y': {
@@ -88,12 +90,12 @@ const timeframeConfig = {
     ],
     series: [
       {
-        name: 'Skenario A',
-        data: [1_550_000, 1_680_000, 1_840_000, 2_020_000, 2_230_000, 2_460_000, 2_710_000, 2_980_000, 3_260_000, 3_560_000]
+        name: 'Skenario Moderat',
+        data: [1_980_000, 2_230_000, 2_520_000, 2_860_000, 3_240_000, 3_690_000, 4_210_000, 4_780_000, 5_420_000, 6_130_000]
       },
       {
-        name: 'Skenario B',
-        data: [1_650_000, 1_820_000, 2_020_000, 2_250_000, 2_510_000, 2_800_000, 3_120_000, 3_470_000, 3_850_000, 4_260_000]
+        name: 'Skenario Optimistis',
+        data: [2_120_000, 2_420_000, 2_780_000, 3_200_000, 3_690_000, 4_270_000, 4_940_000, 5_700_000, 6_570_000, 7_560_000]
       }
     ]
   }
@@ -106,27 +108,39 @@ const baseOptions = {
     fontFamily: 'inherit',
     width: '100%'
   },
+  colors: seriesColors,
   dataLabels: { enabled: false },
   stroke: { curve: 'smooth', width: 3 },
-  colors: ['#FFB70F', '#1DA69D'],
+  markers: {
+    size: 0,
+    hover: { size: 7 }
+  },
   xaxis: {
     categories: [],
     axisTicks: { show: false },
-    labels: { style: { colors: '#475569', fontWeight: 600 } }
+    axisBorder: { show: false },
+    labels: {
+      style: { colors: '#334155', fontWeight: 600 },
+      offsetY: 4
+    }
   },
   yaxis: {
+    tickAmount: 4,
     labels: {
-      formatter: (value) => `${(value / 1_000_000).toFixed(0)} Jt`,
-      style: { colors: '#64748b' }
+      formatter: (value) => `${Math.round(value / 1_000_000)} Jt`,
+      style: { colors: '#475569', fontWeight: 600 }
     }
   },
   grid: {
-    borderColor: '#E2E8F0',
-    strokeDashArray: 6
+    borderColor: '#C8F2EE',
+    strokeDashArray: 4,
+    xaxis: { lines: { show: true } },
+    yaxis: { lines: { show: true } },
+    padding: { left: 12, right: 12 }
   },
   legend: {
     position: 'top',
-    horizontalAlign: 'center',
+    horizontalAlign: 'right',
     fontWeight: 600,
     markers: {
       width: 12,
@@ -156,12 +170,35 @@ const selectedRange = ref(timeframeList.value[1]?.key ?? '5Y')
 
 const chartOptions = computed(() => {
   const active = timeframeConfig[selectedRange.value]
+  const allValues = active.series.flatMap((serie) => serie.data)
+  const min = Math.min(...allValues)
+  const max = Math.max(...allValues)
+  const padding = Math.max(120_000, Math.round((max - min) * 0.12))
+  const highlightIndex = Math.max(active.series[0].data.length - 2, 0)
 
   return {
     ...baseOptions,
     xaxis: {
       ...baseOptions.xaxis,
       categories: active.categories
+    },
+    yaxis: {
+      ...baseOptions.yaxis,
+      min: Math.max(0, min - padding),
+      max: max + padding
+    },
+    markers: {
+      ...baseOptions.markers,
+      discrete: [
+        {
+          seriesIndex: 0,
+          dataPointIndex: highlightIndex,
+          size: 9,
+          fillColor: '#FFFFFF',
+          strokeColor: seriesColors[0],
+          strokeWidth: 3
+        }
+      ]
     }
   }
 })

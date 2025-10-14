@@ -1,32 +1,47 @@
-# Stage 1: Build the application
-FROM node:20-alpine AS builder
+# syntax=docker/dockerfile:1.7
 
-# Set working directory
+############################################
+# Base Node image
+############################################
+FROM node:18-alpine AS base
 WORKDIR /app
+ENV NODE_ENV=production
+RUN apk add --no-cache tini
 
-# Copy package files
+############################################
+# Install dependencies (including dev deps for build)
+############################################
+FROM base AS deps
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
+############################################
+# Build the Vite application
+############################################
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Stage 2: Production server with Nginx
-FROM nginx:alpine
+############################################
+# Final runtime image (Node only)
+############################################
+FROM base AS runner
+ENV TZ=Asia/Jakarta
 
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+USER node
 
-# Copy custom nginx configuration (optional)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --chown=node:node package*.json ./
 
-# Expose port 80
-EXPOSE 80
+# Healthcheck: Vite preview serves on port 4173 by default
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4173/ >/dev/null || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/sbin/tini","--"]
+
+EXPOSE 4173
+
+CMD ["npm","run","preview","--","--host","0.0.0.0","--port","4173"]
+

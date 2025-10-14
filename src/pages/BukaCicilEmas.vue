@@ -62,7 +62,12 @@
             </div>
             <div class="rounded-xl border border-white bg-white px-4 py-3 shadow">
               <p class="text-xs font-semibold text-slate-600">Total Harga Emas</p>
-              <p class="mt-1 text-lg font-bold text-amber-600">{{ fmt(totalPrice) }}</p>
+              <p
+                class="mt-1 font-bold text-amber-600 tabular-nums"
+                :class="formattedTotalPriceClass"
+              >
+                {{ formattedTotalPrice }}
+              </p>
             </div>
           </div>
         </section>
@@ -150,6 +155,37 @@
             />
           </label>
 
+          <div class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 shadow-inner">
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="font-semibold text-slate-700">Verifikasi</span>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-teal-500 hover:text-teal-600"
+                @click="generateCaptcha"
+              >
+                Muat ulang
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5" />
+                </svg>
+              </button>
+            </div>
+            <div class="mt-3 inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-100 via-emerald-200 to-teal-300 px-5 py-2">
+              <span class="font-mono text-lg font-bold tracking-[0.35em] text-emerald-900 select-none">
+                {{ captchaCode }}
+              </span>
+              <svg class="h-6 w-6 text-emerald-600" viewBox="0 0 24 24" fill="none">
+                <path stroke-width="1.5" stroke="currentColor" d="M21 12a9 9 0 1 1-9-9m0 0v4m0-4h-4" />
+              </svg>
+            </div>
+            <input
+              v-model.trim="captchaInput"
+              type="text"
+              class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm uppercase tracking-widest focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200"
+              placeholder="Masukkan kode di atas"
+            />
+            <p v-if="captchaError" class="mt-2 text-xs font-semibold text-rose-600">{{ captchaError }}</p>
+          </div>
+
           <!-- Summary Cards -->
           <div class="mt-6 space-y-3 rounded-xl bg-white/80 p-4 shadow-inner">
             <div class="flex items-center justify-between text-sm">
@@ -176,10 +212,30 @@
 
           <button
             type="submit"
-            class="mt-6 w-full rounded-full bg-amber-400 px-6 py-3 text-base font-semibold text-slate-900 shadow transition hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            class="mt-6 w-full rounded-full bg-amber-400 px-6 py-3 text-base font-semibold text-slate-900 shadow transition hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="isSubmitting"
           >
-            Ajukan
+            <span v-if="isSubmitting" class="inline-flex items-center gap-2">
+              <svg class="h-4 w-4 animate-spin text-slate-900" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Mengirim...
+            </span>
+            <span v-else>Ajukan</span>
           </button>
+
+          <transition name="fade">
+            <div
+              v-if="submitMessage"
+              class="mt-4 rounded-xl border px-4 py-3 text-sm font-semibold"
+              :class="submitStatus === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                : 'border-rose-200 bg-rose-50 text-rose-600'"
+            >
+              {{ submitMessage }}
+            </div>
+          </transition>
         </form>
       </section>
     </div>
@@ -347,7 +403,11 @@ const marginRate = 10
 // API Response State
 const apiPreview = ref(null)
 const csrfToken = ref(null)
+const priceCsrfToken = ref(null)
 const isLoadingPreview = ref(false)
+const isSubmitting = ref(false)
+const submitMessage = ref('')
+const submitStatus = ref('')
 
 // Form
 const form = reactive({
@@ -356,12 +416,39 @@ const form = reactive({
   telepon: ''
 })
 
+const captchaCode = ref('')
+const captchaInput = ref('')
+const captchaError = ref('')
+
 // Fetch gold price from API
 async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
+    if (!priceCsrfToken.value) {
+      const tokenRes = await fetch('http://localhost:3001/get-csrf', {
+        method: 'GET',
+        credentials: 'include'
+      })
+      if (!tokenRes.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${tokenRes.status}`)
+      }
+      const tokenData = await tokenRes.json().catch(() => ({}))
+      priceCsrfToken.value =
+        tokenData?.csrfToken ||
+        tokenData?.token ||
+        tokenData?.['csrf-token'] ||
+        tokenRes.headers.get('X-CSRF-Token')
+      if (!priceCsrfToken.value) {
+        throw new Error('Token CSRF tidak ditemukan')
+      }
+    }
+
     const response = await fetch('http://localhost:3001/api/emas/today', {
-      method: 'GET'
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': priceCsrfToken.value
+      }
     })
 
     if (!response.ok) {
@@ -383,6 +470,7 @@ async function fetchGoldPrice() {
 // Fetch price on component mount
 onMounted(() => {
   fetchGoldPrice()
+  generateCaptcha()
 })
 
 // Computed
@@ -440,6 +528,18 @@ const selectedItems = computed(() =>
     }))
     .filter((item) => item.qty > 0)
 )
+
+const itemsSummary = computed(() =>
+  selectedItems.value.map((item) => `${item.weight}g x${item.qty}`).join('; ')
+)
+
+const formattedTotalPrice = computed(() => fmt(totalPrice.value))
+const formattedTotalPriceClass = computed(() => {
+  const len = formattedTotalPrice.value?.length ?? 0
+  if (len > 18) return 'text-base leading-tight'
+  if (len > 14) return 'text-lg leading-tight'
+  return 'text-xl leading-tight'
+})
 
 // Functions
 async function getCsrfToken() {
@@ -567,28 +667,104 @@ const formatNumber = (n) =>
     maximumFractionDigits: 1
   }).format(n)
 
-const handleSubmit = () => {
+const generateCaptcha = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 5; i += 1) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  captchaCode.value = code
+  captchaInput.value = ''
+  captchaError.value = ''
+}
+
+const handleSubmit = async () => {
+  if (isSubmitting.value) return
+
+  submitMessage.value = ''
+  submitStatus.value = ''
+  captchaError.value = ''
+
   if (selectedItems.value.length === 0) {
-    alert('Silakan tambahkan denominasi emas terlebih dahulu!')
+    submitStatus.value = 'error'
+    submitMessage.value = 'Silakan tambahkan denominasi emas terlebih dahulu.'
+    setTimeout(() => (submitMessage.value = ''), 4000)
     return
   }
 
   if (!form.nama || !form.email || !form.telepon) {
-    alert('Mohon lengkapi semua data!')
+    submitStatus.value = 'error'
+    submitMessage.value = 'Mohon lengkapi data pemohon sebelum mengajukan.'
+    setTimeout(() => (submitMessage.value = ''), 4000)
     return
   }
 
-  alert(`Pengajuan berhasil dikirim!\n\nNama: ${form.nama}\nEmail: ${form.email}\nTelepon: ${form.telepon}\n\nTotal Berat: ${formatNumber(totalGram.value)} gr\nTotal Keping: ${totalQty.value} pcs\nDP: ${fmt(dpNominal.value)}\nAngsuran: ${fmt(angsuranBulanan.value)}/bulan × ${tenor.value} bulan`)
+  if (!captchaInput.value || captchaInput.value.toUpperCase() !== captchaCode.value) {
+    captchaError.value = 'Kode keamanan tidak sesuai.'
+    submitStatus.value = 'error'
+    submitMessage.value = 'Verifikasi captcha gagal. Coba lagi.'
+    generateCaptcha()
+    setTimeout(() => (submitMessage.value = ''), 4000)
+    return
+  }
 
-  // Reset form
-  weightOptions.forEach(weight => {
-    quantities[weight] = 0
-  })
-  form.nama = ''
-  form.email = ''
-  form.telepon = ''
-  dpPct.value = 10
-  apiPreview.value = null
+  try {
+    isSubmitting.value = true
+
+    if (!csrfToken.value) {
+      await getCsrfToken()
+    }
+
+    const payload = {
+      nama: form.nama,
+      email: form.email,
+      no_telepon: form.telepon,
+      tenor: tenor.value,
+      dp_pct: dpPct.value,
+      items: selectedItems.value.map((item) => ({
+        gramase: item.weight,
+        qty: item.qty
+      }))
+    }
+
+    const res = await fetch('http://localhost:3001/api/forms', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken.value
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      throw new Error(data?.message || `Pengajuan gagal dengan status ${res.status}`)
+    }
+
+    submitStatus.value = 'success'
+    submitMessage.value = data?.message || 'Pengajuan berhasil dikirim! Tim kami akan menghubungi Anda.'
+
+    // Reset form & selections
+    weightOptions.forEach((weight) => {
+      quantities[weight] = 0
+    })
+    form.nama = ''
+    form.email = ''
+    form.telepon = ''
+    dpPct.value = 10
+    apiPreview.value = null
+    captchaInput.value = ''
+  } catch (error) {
+    console.error('Submit form failed:', error)
+    submitStatus.value = 'error'
+    submitMessage.value = error.message || 'Pengajuan gagal dikirim.'
+  } finally {
+    isSubmitting.value = false
+    generateCaptcha()
+    setTimeout(() => (submitMessage.value = ''), 4500)
+  }
 }
 </script>
 
@@ -658,5 +834,15 @@ input[type="range"]::-moz-range-thumb:hover {
 input[type="range"]:disabled::-moz-range-thumb {
   background: #cbd5e1;
   cursor: not-allowed;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

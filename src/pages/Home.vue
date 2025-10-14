@@ -108,7 +108,7 @@
         <InfoCard
           type="growth"
           title="Year-on-year Growth"
-          value="+6.35%"
+          :value="yoyText"
         />
       </section>
 
@@ -249,13 +249,55 @@ const projectionText = computed(() => {
 })
 const projectionMessage = computed(() => projectionNote.value)
 
+const formatPercent = (value) => {
+  if (!Number.isFinite(value)) return 'Data tidak tersedia'
+  return `${value > 0 ? '+' : ''}${value.toLocaleString('id-ID', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}%`
+}
+
+const yoyText = computed(() => {
+  if (goldPriceLoading.value || projectionLoading.value) return 'Memuat...'
+  if (goldPrice.value != null && projectionValue.value != null && projectionValue.value !== 0) {
+    const change = ((projectionValue.value - goldPrice.value) / projectionValue.value) * 100
+    return formatPercent(change)
+  }
+  return 'Data tidak tersedia'
+})
+
+const priceCsrfToken = ref(null)
+
 const fetchGoldPrice = async () => {
   goldPriceLoading.value = true
   goldPriceError.value = ''
 
   try {
+    if (!priceCsrfToken.value) {
+      const tokenRes = await fetch('http://localhost:3001/csrf-token', {
+        method: 'GET',
+        credentials: 'include'
+      })
+      if (!tokenRes.ok) {
+        throw new Error(`Gagal mengambil token CSRF: ${tokenRes.status}`)
+      }
+      const tokenData = await tokenRes.json().catch(() => ({}))
+      priceCsrfToken.value =
+        tokenData?.csrfToken ||
+        tokenData?.token ||
+        tokenData?.['csrf-token'] ||
+        tokenRes.headers.get('X-CSRF-Token')
+      if (!priceCsrfToken.value) {
+        throw new Error('Token CSRF tidak ditemukan')
+      }
+    }
+
     const priceRes = await fetch('http://localhost:3001/api/emas/today', {
-      method: 'GET'
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': priceCsrfToken.value
+      }
     })
 
     if (!priceRes.ok) {
@@ -263,7 +305,6 @@ const fetchGoldPrice = async () => {
     }
 
     const priceData = await priceRes.json()
-    // Parse the string value to number
     const hargaString = priceData?.harga_pergram_idr
     goldPrice.value = hargaString ? parseFloat(hargaString) : null
   } catch (error) {

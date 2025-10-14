@@ -300,6 +300,10 @@ import { computed, reactive, ref, watch, onMounted } from 'vue'
 // State for gold price from API
 const goldPricePerGram = ref(0)
 const isLoadingPrice = ref(true)
+const simulationCsrfToken = ref(null)
+const simulationResult = ref(null)
+const simulationLoading = ref(false)
+const simulationError = ref('')
 
 // Define weight options (in grams)
 const weightOptions = [5, 10, 25, 50, 100]
@@ -334,12 +338,40 @@ const showDenominationModal = ref(false)
 const marginRate = 10
 const annualGrowthRate = 0.09
 
+const priceCsrfToken = ref(null)
+
 // Fetch gold price from API
 async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
+    if (!priceCsrfToken.value) {
+      const tokenRes = await fetch('http://localhost:3001/get-csrf', {
+        method: 'GET',
+        credentials: 'include'
+      })
+
+      if (!tokenRes.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${tokenRes.status}`)
+      }
+
+      const tokenData = await tokenRes.json().catch(() => ({}))
+      priceCsrfToken.value =
+        tokenData?.csrfToken ||
+        tokenData?.token ||
+        tokenData?.['csrf-token'] ||
+        tokenRes.headers.get('X-CSRF-Token')
+
+      if (!priceCsrfToken.value) {
+        throw new Error('Token CSRF tidak ditemukan')
+      }
+    }
+
     const response = await fetch('http://localhost:3001/api/emas/today', {
-      method: 'GET'
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': priceCsrfToken.value
+      }
     })
 
     if (!response.ok) {
@@ -361,6 +393,7 @@ async function fetchGoldPrice() {
 // Fetch price on component mount
 onMounted(() => {
   fetchGoldPrice()
+  fetchSimulation()
 })
 
 const totalPrice = computed(() =>
@@ -383,29 +416,64 @@ const dpBounds = computed(() => ({
 const dpMinNominal = computed(() => (totalPrice.value * dpBounds.value.min) / 100)
 const dpMaxNominal = computed(() => (totalPrice.value * dpBounds.value.max) / 100)
 
-const dpNominal = computed(() => {
+const dpNominalBase = computed(() => {
   if (!totalPrice.value) return 0
   return (totalPrice.value * dpPct.value) / 100
 })
-const principal = computed(() => Math.max(totalPrice.value - dpNominal.value, 0))
+
+const dpNominal = computed(() =>
+  typeof simulationResult.value?.result?.dp_rp === 'number'
+    ? simulationResult.value.result.dp_rp
+    : dpNominalBase.value
+)
+
+const principal = computed(() => Math.max(totalPrice.value - dpNominalBase.value, 0))
 
 const tenorYears = computed(() => tenor.value / 12)
 
-const predictedPrice = computed(() =>
+const predictedPriceFallback = computed(() =>
   totalPrice.value ? totalPrice.value * Math.pow(1 + annualGrowthRate, tenorYears.value) : 0
+)
+
+const predictedPrice = computed(() =>
+  typeof simulationResult.value?.result?.harga_prediksi === 'number'
+    ? simulationResult.value.result.harga_prediksi
+    : predictedPriceFallback.value
 )
 
 const tenorMonths = computed(() => Math.max(tenor.value, 1))
 const marginPerMonth = computed(() => principal.value * (marginRate / 100))
-const angsuranBulanan = computed(() =>
+
+const angsuranBulananFallback = computed(() =>
   principal.value && tenorMonths.value ? principal.value / tenorMonths.value + marginPerMonth.value : 0
 )
-const totalAngsuran = computed(() => angsuranBulanan.value * tenorMonths.value)
 
-const profitNominal = computed(() => predictedPrice.value - dpNominal.value - totalAngsuran.value)
-const outflow = computed(() => dpNominal.value + totalAngsuran.value)
+const angsuranBulanan = computed(() =>
+  typeof simulationResult.value?.result?.nominal_angsuran === 'number'
+    ? simulationResult.value.result.nominal_angsuran
+    : angsuranBulananFallback.value
+)
+
+const totalAngsuranFallback = computed(() => angsuranBulananFallback.value * tenorMonths.value)
+const totalAngsuran = computed(() =>
+  typeof simulationResult.value?.result?.total_angsuran === 'number'
+    ? simulationResult.value.result.total_angsuran
+    : totalAngsuranFallback.value
+)
+
+const profitNominal = computed(() =>
+  typeof simulationResult.value?.result?.profit_rp === 'number'
+    ? simulationResult.value.result.profit_rp
+    : predictedPrice.value - dpNominal.value - totalAngsuran.value
+)
+
 const profitPercent = computed(() =>
-  outflow.value ? (profitNominal.value / outflow.value) * 100 : 0
+  typeof simulationResult.value?.result?.profit_pct === 'number'
+    ? simulationResult.value.result.profit_pct
+    : (() => {
+        const outflow = dpNominal.value + totalAngsuran.value
+        return outflow ? (profitNominal.value / outflow) * 100 : 0
+      })()
 )
 
 const selectedItems = computed(() =>
@@ -453,6 +521,80 @@ const formatNumber = (n) =>
     minimumFractionDigits: n % 1 !== 0 ? 1 : 0,
     maximumFractionDigits: 1
   }).format(n)
+
+const ensureSimulationCsrf = async () => {
+  if (simulationCsrfToken.value) return simulationCsrfToken.value
+  const res = await fetch('http://localhost:3001/csrf-token', {
+    method: 'GET',
+    credentials: 'include'
+  })
+  if (!res.ok) {
+    throw new Error(`CSRF request failed: ${res.status}`)
+  }
+  const data = await res.json().catch(() => ({}))
+  const token =
+    data?.csrfToken || data?.token || data?.['csrf-token'] || res.headers.get('X-CSRF-Token')
+  if (!token) {
+    throw new Error('Token CSRF tidak ditemukan')
+  }
+  simulationCsrfToken.value = token
+  return token
+}
+
+const fetchSimulation = async () => {
+  simulationError.value = ''
+
+  if (!totalGram.value || !dpNominalBase.value) {
+    simulationResult.value = null
+    return
+  }
+
+  try {
+    simulationLoading.value = true
+    const token = await ensureSimulationCsrf()
+
+    const payload = {
+      gramase: totalGram.value,
+      tenor: tenor.value,
+      dp_pct: dpNominalBase.value
+    }
+
+    const res = await fetch('http://localhost:3001/api/simulasi/simulasi-cilem', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || `Simulasi gagal (${res.status})`)
+    }
+
+    const data = await res.json().catch(() => ({}))
+    simulationResult.value = data
+  } catch (error) {
+    console.error('Simulasi cil-em failed:', error)
+    simulationError.value = String(error.message || error)
+    simulationResult.value = null
+  } finally {
+    simulationLoading.value = false
+  }
+}
+
+let simulationDebounce = null
+watch(
+  [() => totalGram.value, () => tenor.value, () => dpNominalBase.value],
+  () => {
+    if (simulationDebounce) clearTimeout(simulationDebounce)
+    simulationDebounce = setTimeout(() => {
+      fetchSimulation()
+    }, 400)
+  }
+)
 </script>
 
 <style scoped>

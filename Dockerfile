@@ -3,9 +3,8 @@
 ############################################
 # Base Node image
 ############################################
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 WORKDIR /app
-ENV NODE_ENV=production
 RUN apk add --no-cache tini
 
 ############################################
@@ -13,6 +12,8 @@ RUN apk add --no-cache tini
 ############################################
 FROM base AS deps
 COPY package*.json ./
+# Install ALL dependencies (including devDependencies for Vite build)
+ENV NODE_ENV=development
 RUN npm ci
 
 ############################################
@@ -21,12 +22,14 @@ RUN npm ci
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Build with vite (needs devDependencies like vite, @vitejs/plugin-vue, etc)
 RUN npm run build
 
 ############################################
 # Final runtime image (Node only)
 ############################################
 FROM base AS runner
+ENV NODE_ENV=production
 ENV TZ=Asia/Jakarta
 
 USER node

@@ -139,25 +139,35 @@ const success = ref('')
 // Fetch CSRF token dari server
 const getCsrfToken = async () => {
   try {
+    console.log('🔄 Fetching CSRF token from /csrf-token')
     const response = await apiFetch('/csrf-token', {
       method: 'GET'
     })
 
+    console.log('📊 CSRF Response Status:', response.status)
+    console.log('📊 CSRF Response Headers:', Object.fromEntries(response.headers.entries()))
+
     await ensureSuccess(response)
 
     const contentType = response.headers.get('content-type') || ''
+    console.log('📊 CSRF Content-Type:', contentType)
+
     if (!contentType.includes('application/json')) {
       throw new Error('Invalid CSRF response (expected JSON)')
     }
 
     const data = await response.json().catch(() => null)
+    console.log('📊 CSRF Response Data:', data)
+
     if (!data?.csrfToken) {
+      console.error('❌ CSRF token not found in response. Available keys:', Object.keys(data || {}))
       throw new Error('CSRF token tidak ditemukan di respons')
     }
 
+    console.log('✅ CSRF Token retrieved successfully:', data.csrfToken.substring(0, 10) + '...')
     return data.csrfToken
   } catch (e) {
-    console.error('Error fetching CSRF token:', e)
+    console.error('❌ Error fetching CSRF token:', e)
     return null
   }
 }
@@ -177,19 +187,22 @@ const handleLogin = async () => {
       return
     }
 
+    console.log('🔄 Sending login request with CSRF token:', csrfToken.substring(0, 10) + '...')
+
     const response = await apiFetch('/api/admin/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-        'Access-Control-Allow-Credentials': 'true',
+        'X-CSRF-Token': csrfToken
       },
       body: JSON.stringify({
         username: username.value,
         password: password.value,
-      }),
-      credentials: 'include', // untuk menyimpan cookie JWT
+      })
     })
+
+    console.log('📊 Login Response Status:', response.status)
+    console.log('📊 Login Response Headers:', Object.fromEntries(response.headers.entries()))
 
     const contentType = response.headers.get('content-type') || ''
     const data = contentType.includes('application/json')

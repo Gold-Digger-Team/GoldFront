@@ -697,7 +697,18 @@ const handleLogout = async () => {
 
 const checkAuth = async () => {
   try {
-    const res = await apiFetch('/api/admin/me')
+    const csrfToken = await getCsrfToken()
+    if (!csrfToken) {
+      console.error('Cannot get CSRF token for auth check')
+      router.push('/login')
+      return
+    }
+
+    const res = await apiFetch('/api/admin/me', {
+      headers: {
+        'X-CSRF-Token': csrfToken
+      }
+    })
 
     if (!res.ok) {
       router.push('/login')

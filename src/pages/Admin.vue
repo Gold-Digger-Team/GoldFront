@@ -5,7 +5,7 @@
       <div class="max-w-7xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <img src="/src/assets/BSI (Bank Syariah Indonesia) Logo.png" class="h-10 w-auto" alt="BSI" />
+            <img src="/assets/bsi-logo.png" class="h-10 w-auto" alt="BSI" />
             <div class="border-l border-slate-300 pl-4">
               <h1 class="text-xl font-bold text-slate-800">Admin Dashboard</h1>
               <p class="text-sm text-slate-500">Customer Management</p>

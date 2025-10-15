@@ -103,8 +103,8 @@ const slides = [
       'Nikmati kemudahan mencicil emas mulai dari 5 gram dengan proses cepat dan aman.',
     cta: 'Informasi Selengkapnya',
     highlights: ['Emas Murni 99,99%', 'Bullion Protect, Emas Terjamin Asli', 'Harga Buyback Kompetitif'],
-    image: '/src/assets/ads.png',
-    logos: [{ src: '/src/assets/BSI (Bank Syariah Indonesia) Logo.png', alt: 'Bank Syariah Indonesia' }]
+    image: '/assets/emas.png',
+    logos: [{ src: '/assets/bsi-logo.png', alt: 'Bank Syariah Indonesia' }]
   },
   {
     id: 'invest-emas',
@@ -113,8 +113,8 @@ const slides = [
     description: 'Monitor harga emas real time dan rencanakan pembelian reguler otomatis setiap bulan.',
     cta: 'Lihat Produk',
     highlights: ['Harga live update harian', 'Auto debet bulanan', 'Konsultasi finansial pribadi'],
-    image: '/src/assets/emas.png',
-    logos: [{ src: '/src/assets/BSI (Bank Syariah Indonesia) Logo.png', alt: 'Bank Syariah Indonesia' }]
+    image: '/assets/emas.png',
+    logos: [{ src: '/assets/bsi-logo.png', alt: 'Bank Syariah Indonesia' }]
   },
   {
     id: 'prioritas',
@@ -124,8 +124,8 @@ const slides = [
       'Fasilitas penyimpanan aman, relationship manager pribadi, dan promo emas eksklusif untuk Anda.',
     cta: 'Daftar Prioritas',
     highlights: ['Safe deposit box eksklusif', 'Layanan 24/7', 'Akses promo premium'],
-    image: '/src/assets/Gambar BSI Gold.png',
-    logos: [{ src: '/src/assets/BSI (Bank Syariah Indonesia) Logo.png', alt: 'Bank Syariah Indonesia' }]
+    image: '/assets/Gambar BSI Gold.png',
+    logos: [{ src: '/assets/bsi-logo.png', alt: 'Bank Syariah Indonesia' }]
   }
 ]
 

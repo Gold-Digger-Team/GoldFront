@@ -126,6 +126,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch, ensureSuccess } from '@/services/apiClient'
 
 const router = useRouter()
 const username = ref('')
@@ -138,10 +139,22 @@ const success = ref('')
 // Fetch CSRF token dari server
 const getCsrfToken = async () => {
   try {
-    const response = await fetch('/csrf-token', {
-      credentials: 'include', // penting untuk cookie
+    const response = await apiFetch('/csrf-token', {
+      method: 'GET'
     })
-    const data = await response.json()
+
+    await ensureSuccess(response)
+
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      throw new Error('Invalid CSRF response (expected JSON)')
+    }
+
+    const data = await response.json().catch(() => null)
+    if (!data?.csrfToken) {
+      throw new Error('CSRF token tidak ditemukan di respons')
+    }
+
     return data.csrfToken
   } catch (e) {
     console.error('Error fetching CSRF token:', e)
@@ -164,7 +177,7 @@ const handleLogin = async () => {
       return
     }
 
-    const response = await fetch('/api/admin/login', {
+    const response = await apiFetch('/api/admin/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -177,7 +190,10 @@ const handleLogin = async () => {
       credentials: 'include', // untuk menyimpan cookie JWT
     })
 
-    const data = await response.json()
+    const contentType = response.headers.get('content-type') || ''
+    const data = contentType.includes('application/json')
+      ? await response.json().catch(() => ({}))
+      : {}
 
     if (response.ok) {
       // Login berhasil

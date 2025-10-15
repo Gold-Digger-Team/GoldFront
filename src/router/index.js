@@ -31,16 +31,18 @@ const router = createRouter({
 
 // Navigation guard untuk proteksi halaman admin
 router.beforeEach(async (to, _from, next) => {
+  // Hapus sesi admin pada setiap rute non-admin sehingga akses kembali ke admin butuh login ulang
+  if (!to.meta?.requiresAuth) {
+    localStorage.removeItem('admin_user')
+  }
+
   // Untuk cookie-based auth, kita cek apakah ada user di localStorage
   // atau bisa juga cek langsung ke API /api/admin/me
   const adminUser = localStorage.getItem('admin_user')
 
-  if (to.meta.requiresAuth && !adminUser) {
+  if (to.meta?.requiresAuth && !adminUser) {
     // Redirect ke login jika belum login
     next('/login')
-  } else if (to.path === '/login' && adminUser) {
-    // Redirect ke admin jika sudah login
-    next('/admin')
   } else {
     next()
   }

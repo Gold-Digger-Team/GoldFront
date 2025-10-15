@@ -62,24 +62,14 @@
       </div>
 
       <!-- Projection Info -->
-      <div v-else class="mt-6 grid gap-4 md:grid-cols-2">
+      <div v-else class="mt-6">
         <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <h4 class="text-sm font-semibold text-amber-900">📊 Skenario Moderat</h4>
-          <p class="mt-2 text-xs text-amber-700">Proyeksi dengan asumsi pertumbuhan stabil ~13% per tahun</p>
+          <h4 class="text-sm font-semibold text-amber-900">📈 Proyeksi Tahunan</h4>
+          <p class="mt-2 text-xs text-amber-700">Perkiraan harga emas berdasarkan model prediksi internal.</p>
           <div class="mt-3 space-y-2">
-            <div v-for="proj in moderateProjections" :key="proj.year" class="flex items-center justify-between text-xs">
+            <div v-for="proj in annualProjections" :key="proj.year" class="flex items-center justify-between text-xs">
               <span class="text-amber-700">{{ proj.year }}</span>
               <span class="font-semibold text-amber-900">{{ proj.price }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <h4 class="text-sm font-semibold text-emerald-900">🚀 Skenario Optimistis</h4>
-          <p class="mt-2 text-xs text-emerald-700">Proyeksi dengan asumsi pertumbuhan tinggi ~24% per tahun</p>
-          <div class="mt-3 space-y-2">
-            <div v-for="proj in optimisticProjections" :key="proj.year" class="flex items-center justify-between text-xs">
-              <span class="text-emerald-700">{{ proj.year }}</span>
-              <span class="font-semibold text-emerald-900">{{ proj.price }}</span>
             </div>
           </div>
         </div>
@@ -145,7 +135,12 @@ const apiData = ref([])
 const isLoadingData = ref(true)
 const dataError = ref(null)
 
-const seriesColors = ['#F9B10A', '#5DC1B4']
+// Prediction API data state
+const predictionData = ref([])
+const isLoadingPrediction = ref(false)
+const predictionError = ref(null)
+
+const seriesColors = ['#F9B10A']
 const JT = 1_000_000
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const timeframeDurations = {
@@ -207,15 +202,27 @@ const formatAxisLabel = (value) => {
   if (Number.isNaN(date.getTime())) return ''
 
   if (chartMode.value === 'proyeksi') {
-    return date.getMonth() === 0 ? date.getFullYear().toString() : ''
+    // For projection mode, show year only at January (month 0) or the first month of each year
+    const month = date.getMonth()
+    const year = date.getFullYear()
+
+    // Show label only for January to avoid duplicates
+    if (month === 0) {
+      return year.toString()
+    }
+    // Also show for other significant months to ensure visibility
+    if (month === 6) {
+      return `Mid ${year}`
+    }
+    return ''
   }
 
   const duration = timeframeDurations[selectedTimeframe.value]
 
   // For 1 year, show month-year
   if (duration === 12) {
-    // Show every month
-    if (date.getDate() <= 7) {
+    // Show every 2 months to avoid overcrowding
+    if (date.getMonth() % 2 === 0) {
       return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
     }
     return ''
@@ -224,7 +231,7 @@ const formatAxisLabel = (value) => {
   // For 3 years, show quarter-year
   if (duration === 36) {
     // Show every quarter
-    if (date.getDate() <= 7 && date.getMonth() % 3 === 0) {
+    if (date.getMonth() % 3 === 0) {
       return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
     }
     return ''
@@ -233,7 +240,7 @@ const formatAxisLabel = (value) => {
   // For 5 years, show half year
   if (duration === 60) {
     // Show every 6 months
-    if (date.getDate() <= 7 && date.getMonth() % 6 === 0) {
+    if (date.getMonth() % 6 === 0) {
       return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
     }
     return ''
@@ -241,7 +248,7 @@ const formatAxisLabel = (value) => {
 
   // For ALL, show yearly
   if (!duration) {
-    if (date.getMonth() === 0 && date.getDate() <= 7) {
+    if (date.getMonth() === 0) {
       return date.getFullYear().toString()
     }
     return ''
@@ -357,9 +364,38 @@ const historisControlPoints = computed(() => {
   }]
 })
 
+// Fetch prediction data from API
+async function fetchPredictionData() {
+  isLoadingPrediction.value = true
+  predictionError.value = null
+
+  try {
+    const response = await apiFetch('/api/simulasi/get-all-prediksi', {
+      method: 'GET'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch prediction data: ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    if (result.data && Array.isArray(result.data)) {
+      predictionData.value = result.data
+      console.log('✅ Prediction data loaded:', predictionData.value.length, 'records')
+    }
+  } catch (error) {
+    console.error('❌ Error fetching prediction data:', error)
+    predictionError.value = error.message
+  } finally {
+    isLoadingPrediction.value = false
+  }
+}
+
 // Fetch data on component mount
 onMounted(() => {
   fetchGoldPriceData()
+  fetchPredictionData()
 })
 
 // Get the last historical price for projection baseline
@@ -373,49 +409,43 @@ const lastHistoricalDate = computed(() => {
   return lastPoint?.date || new Date(2025, 8, 1)
 })
 
-// Calculate projection based on last historical price
-const proyeksiControlPoints = computed(() => {
-  const basePrice = lastHistoricalPrice.value / JT // convert to millions
+// Calculate projection based on API data or fallback to calculation
+const projectionControlPoints = computed(() => {
   const startDate = lastHistoricalDate.value
+  const startPoint = { date: new Date(startDate), value: lastHistoricalPrice.value }
 
-  return {
-    moderat: [
-      { date: new Date(startDate), value: lastHistoricalPrice.value },
-      { date: new Date(startDate.getFullYear() + 1, 0, 1), value: toRupiah(basePrice * 1.13) },
-      { date: new Date(startDate.getFullYear() + 2, 0, 1), value: toRupiah(basePrice * 1.28) },
-      { date: new Date(startDate.getFullYear() + 3, 0, 1), value: toRupiah(basePrice * 1.41) },
-      { date: new Date(startDate.getFullYear() + 4, 8, 1), value: toRupiah(basePrice * 1.65) },
-      { date: new Date(startDate.getFullYear() + 5, 11, 1), value: toRupiah(basePrice * 2.17) }
-    ],
-    optimistis: [
-      { date: new Date(startDate), value: lastHistoricalPrice.value },
-      { date: new Date(startDate.getFullYear() + 1, 0, 1), value: toRupiah(basePrice * 1.24) },
-      { date: new Date(startDate.getFullYear() + 2, 0, 1), value: toRupiah(basePrice * 1.43) },
-      { date: new Date(startDate.getFullYear() + 3, 0, 1), value: toRupiah(basePrice * 1.72) },
-      { date: new Date(startDate.getFullYear() + 4, 8, 1), value: toRupiah(basePrice * 1.96) },
-      { date: new Date(startDate.getFullYear() + 5, 11, 1), value: toRupiah(basePrice * 2.43) }
+  if (predictionData.value && predictionData.value.length > 0) {
+    const sortedPredictions = [...predictionData.value].sort((a, b) => a.tahun_ke - b.tahun_ke)
+
+    return [
+      startPoint,
+      ...sortedPredictions.map((pred) => ({
+        date: new Date(startDate.getFullYear() + pred.tahun_ke, 0, 1),
+        value: Math.round(pred.harga_prediksi)
+      }))
     ]
   }
+
+  const basePrice = lastHistoricalPrice.value / JT
+
+  return [
+    startPoint,
+    { date: new Date(startDate.getFullYear() + 1, 0, 1), value: toRupiah(basePrice * 1.13) },
+    { date: new Date(startDate.getFullYear() + 2, 0, 1), value: toRupiah(basePrice * 1.28) },
+    { date: new Date(startDate.getFullYear() + 3, 0, 1), value: toRupiah(basePrice * 1.41) },
+    { date: new Date(startDate.getFullYear() + 4, 8, 1), value: toRupiah(basePrice * 1.65) },
+    { date: new Date(startDate.getFullYear() + 5, 11, 1), value: toRupiah(basePrice * 2.17) }
+  ]
 })
 
-const projectionModerateTimeline = computed(() =>
-  buildMonthlyTimeline(proyeksiControlPoints.value.moderat)
-)
-const projectionOptimisticTimeline = computed(() =>
-  buildMonthlyTimeline(proyeksiControlPoints.value.optimistis)
+const projectionTimeline = computed(() =>
+  buildMonthlyTimeline(projectionControlPoints.value)
 )
 
-const projectionModerate = computed(() =>
+const projectionSeries = computed(() =>
   toSeriesData(
-    projectionModerateTimeline.value.categories,
-    projectionModerateTimeline.value.values
-  )
-)
-
-const projectionOptimistic = computed(() =>
-  toSeriesData(
-    projectionOptimisticTimeline.value.categories,
-    projectionOptimisticTimeline.value.values
+    projectionTimeline.value.categories,
+    projectionTimeline.value.values
   )
 )
 
@@ -423,17 +453,16 @@ const lastHistoricalPoint = computed(() =>
   historicalSeriesFull.value[historicalSeriesFull.value.length - 1]
 )
 
-const trimmedModerateFuture = computed(() =>
-  projectionModerate.value.filter((point) => point.x > lastHistoricalPoint.value.x)
-)
-
-const trimmedOptimisticFuture = computed(() =>
-  projectionOptimistic.value.filter((point) => point.x > lastHistoricalPoint.value.x)
+const trimmedProjectionFuture = computed(() =>
+  projectionSeries.value.filter((point) => point.x > lastHistoricalPoint.value.x)
 )
 
 const highlightProjectionTimestamp = computed(() => {
-  const startDate = lastHistoricalDate.value
-  return new Date(startDate.getFullYear() + 4, 8, 1).getTime()
+  const futurePoints = trimmedProjectionFuture.value
+  if (futurePoints.length > 0) {
+    return futurePoints[futurePoints.length - 1].x
+  }
+  return lastHistoricalPoint.value?.x ?? null
 })
 
 const getHistoricalSlice = (months) => {
@@ -468,7 +497,7 @@ const baseChartOptions = {
   dataLabels: { enabled: false },
   stroke: {
     curve: 'smooth',
-    width: [4, 3],
+    width: 4,
     lineCap: 'round'
   },
   markers: {
@@ -479,7 +508,7 @@ const baseChartOptions = {
     type: 'gradient',
     gradient: {
       shadeIntensity: 0.9,
-      gradientToColors: ['#FFCF4A', '#90DDD3'],
+      gradientToColors: ['#FFCF4A'],
       inverseColors: false,
       opacityFrom: 0.28,
       opacityTo: 0.05,
@@ -499,6 +528,11 @@ const baseChartOptions = {
       rotateAlways: false,
       hideOverlappingLabels: true,
       trim: false
+    },
+    title: {
+      text: 'Periode (Tanggal)',
+      style: { colors: '#475569', fontWeight: 600, fontSize: '11px' },
+      offsetY: 8
     },
     tooltip: {
       enabled: false
@@ -576,18 +610,16 @@ const activeView = computed(() => {
     }
   }
 
-  const moderateSeries = [...historicalSeriesFull.value, ...trimmedModerateFuture.value]
-  const optimisticSeries = [lastHistoricalPoint.value, ...trimmedOptimisticFuture.value]
-  const combinedValues = [
-    ...moderateSeries.map((point) => point.y),
-    ...trimmedOptimisticFuture.value.map((point) => point.y)
+  const projectionWithHistory = [
+    ...historicalSeriesFull.value,
+    ...trimmedProjectionFuture.value
   ]
+  const combinedValues = projectionWithHistory.map((point) => point.y)
 
   return {
     mode: 'proyeksi',
     series: [
-      { name: 'Skenario Moderat', data: moderateSeries },
-      { name: 'Skenario Optimistis', data: optimisticSeries }
+      { name: 'Proyeksi Harga Emas', data: projectionWithHistory }
     ],
     highlightX: highlightProjectionTimestamp.value,
     min: Math.min(...combinedValues),
@@ -643,7 +675,17 @@ const chartOptions = computed(() => {
   return {
     ...baseChartOptions,
     xaxis: {
-      ...baseChartOptions.xaxis
+      ...baseChartOptions.xaxis,
+      // Add tickAmount for projection mode to force showing more labels
+      ...(mode === 'proyeksi' && {
+        tickAmount: 'dataPoints',
+        labels: {
+          ...baseChartOptions.xaxis.labels,
+          show: true,
+          showDuplicates: false,
+          minHeight: 60
+        }
+      })
     },
     yaxis: {
       ...baseChartOptions.yaxis,
@@ -784,19 +826,10 @@ const priceInfoTable = computed(() => {
   return intervals
 })
 
-// Moderate projections for display
-const moderateProjections = computed(() => {
-  const points = proyeksiControlPoints.value.moderat
-  return points.slice(1).map(point => ({
-    year: point.date.getFullYear(),
-    price: formatCurrency(point.value)
-  }))
-})
-
-// Optimistic projections for display
-const optimisticProjections = computed(() => {
-  const points = proyeksiControlPoints.value.optimistis
-  return points.slice(1).map(point => ({
+// Projection list for display
+const annualProjections = computed(() => {
+  const points = projectionControlPoints.value
+  return points.slice(1).map((point) => ({
     year: point.date.getFullYear(),
     price: formatCurrency(point.value)
   }))

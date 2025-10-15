@@ -171,16 +171,28 @@ const baseOptions = {
   },
   xaxis: {
     categories: [],
-    axisTicks: { show: false },
+    axisTicks: { show: true },
     axisBorder: { show: true, color: '#E2E8F0' },
     labels: {
       style: { colors: '#334155', fontWeight: 600, fontSize: '11px' },
       offsetY: 4,
       rotate: -45,
-      rotateAlways: false
+      rotateAlways: false,
+      hideOverlappingLabels: true,
+      trim: false,
+      formatter: (value) => {
+        // Format label untuk menampilkan tahun dan bulan
+        if (typeof value === 'string' && value.includes('-')) {
+          const [year, month] = value.split('-')
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+          const monthIndex = parseInt(month) - 1
+          return `${monthNames[monthIndex]}\n${year}`
+        }
+        return value
+      }
     },
     title: {
-      text: 'Periode (Tahun-Bulan)',
+      text: 'Periode (Tanggal)',
       style: { color: '#475569', fontSize: '11px', fontWeight: 600 },
       offsetY: 80
     }

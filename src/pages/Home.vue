@@ -12,17 +12,17 @@
 
         <!-- Navigation Menu -->
         <nav class="flex items-center gap-8">
-          <a href="#" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
-            Beranda
+          <a href="https://www.bankbsi.co.id/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
+            Halaman Utama
           </a>
-          <a href="#" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
-            Produk
+          <a href="https://www.bankbsi.co.id/news-update" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
+            Berita & Pembaruan
           </a>
-          <a href="#" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
-            Tentang Kami
+          <a href="https://www.bankbsi.co.id/company-information" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
+            Informasi Perusahaan
           </a>
-          <a href="#" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
-            Kontak
+          <a href="https://ir.bankbsi.co.id/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors duration-200">
+            Hubungan Investor
           </a>
         </nav>
 
@@ -34,59 +34,6 @@
         </div>
       </div>
     </header>
-
-    <!-- ================== HERO BANNER (SLIDER AREA) ================== -->
-    <section class="relative overflow-hidden bg-slate-50">
-      <div class="relative h-[320px] w-full">
-        <TransitionGroup name="slide">
-          <img
-            v-for="(banner, index) in banners"
-            v-show="currentBannerIndex === index"
-            :key="index"
-            :src="banner.src"
-            class="absolute inset-0 h-full w-full object-cover object-center"
-            :alt="banner.alt"
-          />
-        </TransitionGroup>
-
-        <!-- Overlay Gradient -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-
-        <!-- Navigation Arrows -->
-        <button
-          @click="prevBanner"
-          class="absolute left-6 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-xl backdrop-blur transition-all hover:bg-white hover:scale-110 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          aria-label="Banner sebelumnya"
-        >
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <button
-          @click="nextBanner"
-          class="absolute right-6 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-xl backdrop-blur transition-all hover:bg-white hover:scale-110 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          aria-label="Banner berikutnya"
-        >
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <!-- Navigation Dots -->
-        <div class="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-          <button
-            v-for="(_, index) in banners"
-            :key="index"
-            @click="currentBannerIndex = index"
-            class="transition-all duration-300"
-            :class="currentBannerIndex === index
-              ? 'h-2.5 w-10 rounded-full bg-white shadow-lg'
-              : 'h-2.5 w-2.5 rounded-full bg-white/60 hover:bg-white/90'"
-            :aria-label="`Go to banner ${index + 1}`"
-          ></button>
-        </div>
-      </div>
-    </section>
 
     <!-- ================== MAIN CONTENT ================== -->
     <main class="mx-auto max-w-6xl space-y-8 px-4 py-10">
@@ -104,11 +51,13 @@
           type="projection"
           title="Proyeksi 3 Tahun Ke Depan"
           :value="projectionText"
+          :subtitle="projectionGrowthText"
         />
         <InfoCard
           type="growth"
           title="Year-on-year Growth"
           :value="yoyText"
+          :subtitle="yoySubtitle"
           :trend="yoyTrend"
         />
       </section>
@@ -148,7 +97,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { apiFetch } from '@/services/apiClient'
 import BSIGoldHero from '../components/BSIGoldHero.vue'
 import InfoCard from '../components/sections/InfoCard.vue'
@@ -158,40 +107,6 @@ import HargaEmas from './HargaEmas.vue'
 import PrediksiKeuntungan from './PrediksiKeuntungan.vue'
 import KalkulatorCicilEmas from './KalkulatorCicilEmas.vue'
 import BukaCicilEmas from './BukaCicilEmas.vue'
-
-// Banner slider setup
-const banners = [
-  { src: '/assets/banner1.svg', alt: 'Banner 1' },
-  { src: '/assets/banner2.svg', alt: 'Banner 2' }
-]
-const currentBannerIndex = ref(0)
-let bannerInterval = null
-
-// Auto-slide banners every 5 seconds
-const startBannerSlider = () => {
-  bannerInterval = setInterval(() => {
-    currentBannerIndex.value = (currentBannerIndex.value + 1) % banners.length
-  }, 5000)
-}
-
-const stopBannerSlider = () => {
-  if (bannerInterval) {
-    clearInterval(bannerInterval)
-    bannerInterval = null
-  }
-}
-
-const nextBanner = () => {
-  currentBannerIndex.value = (currentBannerIndex.value + 1) % banners.length
-  stopBannerSlider()
-  startBannerSlider()
-}
-
-const prevBanner = () => {
-  currentBannerIndex.value = (currentBannerIndex.value - 1 + banners.length) % banners.length
-  stopBannerSlider()
-  startBannerSlider()
-}
 
 const sections = [
   { name: 'Harga Emas', slug: 'harga-emas', component: HargaEmas },
@@ -249,6 +164,19 @@ const projectionText = computed(() => {
   if (projectionError.value) return projectionError.value
   return 'Data tidak tersedia'
 })
+
+const projectionGrowthText = computed(() => {
+  if (projectionLoading.value || goldPriceLoading.value) return ''
+  if (!projectionValue.value || !goldPrice.value) return ''
+
+  const growthRp = projectionValue.value - goldPrice.value
+  const growthPercent = ((growthRp / goldPrice.value) * 100)
+
+  if (!Number.isFinite(growthRp) || !Number.isFinite(growthPercent)) return ''
+
+  return `${growthPercent > 0 ? '+' : ''}${formatCurrency(growthRp)} (${growthPercent > 0 ? '+' : ''}${growthPercent.toFixed(1)}%)`
+})
+
 const projectionMessage = computed(() => projectionNote.value)
 
 const formatPercent = (value) => {
@@ -264,6 +192,11 @@ const yoyText = computed(() => {
   if (yoyError.value) return yoyError.value
   if (Number.isFinite(yoyValue.value)) return formatPercent(yoyValue.value)
   return 'Data tidak tersedia'
+})
+
+const yoySubtitle = computed(() => {
+  if (yoyLoading.value || yoyError.value || !Number.isFinite(yoyValue.value)) return ''
+  return 'dari 1 tahun lalu'
 })
 
 const priceCsrfToken = ref(undefined)
@@ -455,38 +388,12 @@ const fetchHistoricalYoy = async () => {
 }
 
 onMounted(() => {
-  startBannerSlider()
   fetchGoldPrice()
   fetchProjection()
   fetchHistoricalYoy()
 })
 
-onUnmounted(() => {
-  stopBannerSlider()
-})
-
 </script>
 
 <style scoped>
-/* Banner Slider Transitions */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.8s ease-in-out;
-}
-
-.slide-enter-from {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
-.slide-leave-to {
-  opacity: 0;
-  transform: translateX(-100%);
-}
-
-.slide-enter-to,
-.slide-leave-from {
-  opacity: 1;
-  transform: translateX(0);
-}
 </style>

@@ -34,6 +34,11 @@
         <p class="mt-0.5 text-base font-bold md:text-lg truncate" :class="valueColor">
           {{ value }}
         </p>
+
+        <!-- Subtitle (optional) -->
+        <p v-if="subtitle" class="mt-0.5 text-[10px] md:text-xs font-medium" :class="subtitleColor">
+          {{ subtitle }}
+        </p>
       </div>
     </div>
   </article>
@@ -45,6 +50,10 @@ import { computed } from 'vue'
 const props = defineProps({
   title: String,
   value: String,
+  subtitle: {
+    type: String,
+    default: ''
+  },
   type: {
     type: String,
     default: 'default',
@@ -121,6 +130,25 @@ const titleColor = computed(() => {
 })
 
 const valueColor = computed(() => {
+  if (props.type === 'growth') {
+    if (props.trend === 'positive') {
+      return 'text-emerald-600'
+    }
+    if (props.trend === 'negative') {
+      return 'text-rose-600'
+    }
+    return 'text-gray-600'
+  }
+
+  const colors = {
+    price: 'text-yellow-600',
+    projection: 'text-purple-600',
+    default: 'text-slate-600'
+  }
+  return colors[props.type] || colors.default
+})
+
+const subtitleColor = computed(() => {
   if (props.type === 'growth') {
     if (props.trend === 'positive') {
       return 'text-emerald-600'

@@ -9,7 +9,7 @@
       <!-- Icon -->
       <div
         class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
-        :class="iconBgColor"
+        :class="[iconBgColor, iconAnimationClass]"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -17,7 +17,7 @@
           viewBox="0 0 24 24"
           stroke-width="2.5"
           stroke="currentColor"
-          class="h-5 w-5"
+          class="h-5 w-5 info-card__icon-svg"
           :class="iconColor"
           v-html="iconPath"
         />
@@ -49,6 +49,11 @@ const props = defineProps({
     type: String,
     default: 'default',
     validator: (value) => ['price', 'projection', 'growth', 'default'].includes(value)
+  },
+  trend: {
+    type: String,
+    default: 'neutral',
+    validator: (value) => ['positive', 'negative', 'neutral'].includes(value)
   }
 })
 
@@ -85,6 +90,16 @@ const iconBgColor = computed(() => {
   return colors[props.type] || colors.default
 })
 
+const iconAnimationClass = computed(() => {
+  const animations = {
+    price: 'info-card__icon--float',
+    projection: 'info-card__icon--pulse',
+    growth: 'info-card__icon--bounce',
+    default: 'info-card__icon--twirl'
+  }
+  return animations[props.type] || animations.default
+})
+
 const iconColor = computed(() => {
   const colors = {
     price: 'text-yellow-700',
@@ -106,12 +121,111 @@ const titleColor = computed(() => {
 })
 
 const valueColor = computed(() => {
+  if (props.type === 'growth') {
+    if (props.trend === 'positive') {
+      return 'text-emerald-600'
+    }
+    if (props.trend === 'negative') {
+      return 'text-rose-600'
+    }
+    return 'text-gray-600'
+  }
+
   const colors = {
     price: 'text-yellow-600',
     projection: 'text-purple-600',
-    growth: 'text-gray-600',
     default: 'text-slate-600'
   }
   return colors[props.type] || colors.default
 })
 </script>
+
+<style scoped>
+.info-card__icon--float {
+  animation: info-card-float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.info-card__icon--pulse {
+  animation: info-card-pulse 2.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.info-card__icon--bounce {
+  animation: info-card-bounce 2.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.info-card__icon--twirl {
+  animation: info-card-twirl 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.info-card__icon-svg {
+  animation: info-card-glow 3s ease-in-out infinite;
+}
+
+@keyframes info-card-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes info-card-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.08);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+}
+
+@keyframes info-card-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+  55% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes info-card-twirl {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  40% {
+    transform: rotate(8deg) scale(1.05);
+  }
+  60% {
+    transform: rotate(-6deg) scale(0.98);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes info-card-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6));
+  }
+}
+</style>

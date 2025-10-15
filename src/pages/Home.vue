@@ -100,15 +100,16 @@
           title="Harga Emas Saat Ini"
           :value="priceCardText"
         />
-      <InfoCard
-        type="projection"
-        title="Proyeksi 3 Tahun Ke Depan"
-        :value="projectionText"
-      />
+        <InfoCard
+          type="projection"
+          title="Proyeksi 3 Tahun Ke Depan"
+          :value="projectionText"
+        />
         <InfoCard
           type="growth"
           title="Year-on-year Growth"
           :value="yoyText"
+          :trend="yoyTrend"
         />
       </section>
 
@@ -148,7 +149,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { apiFetch, predictionApiFetch } from '@/services/apiClient'
+import { apiFetch } from '@/services/apiClient'
 import BSIGoldHero from '../components/BSIGoldHero.vue'
 import InfoCard from '../components/sections/InfoCard.vue'
 import SidebarMenu from '../components/sections/SidebarMenu.vue'
@@ -261,7 +262,7 @@ const formatPercent = (value) => {
 const yoyText = computed(() => {
   if (yoyLoading.value) return 'Memuat...'
   if (yoyError.value) return yoyError.value
-  if (yoyValue.value != null) return formatPercent(yoyValue.value)
+  if (Number.isFinite(yoyValue.value)) return formatPercent(yoyValue.value)
   return 'Data tidak tersedia'
 })
 
@@ -269,6 +270,18 @@ const priceCsrfToken = ref(undefined)
 const yoyValue = ref(null)
 const yoyLoading = ref(false)
 const yoyError = ref('')
+const yoyTrend = computed(() => {
+  if (yoyValue.value == null || Number.isNaN(yoyValue.value)) {
+    return 'neutral'
+  }
+  if (yoyValue.value > 0) {
+    return 'positive'
+  }
+  if (yoyValue.value < 0) {
+    return 'negative'
+  }
+  return 'neutral'
+})
 
 const ensurePriceCsrfToken = async () => {
   if (priceCsrfToken.value !== undefined) {
@@ -341,33 +354,35 @@ const fetchProjection = async () => {
   projectionNote.value = ''
 
   try {
-    const res = await predictionApiFetch('/predict', {
-      method: 'POST',
+    const res = await apiFetch('/api/simulasi/prediksi-emas?tahun_ke=3', {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({})
+        Accept: 'application/json'
+      }
     })
 
-    const data = await res.json().catch(() => ({}))
+    const data = await res.json().catch(() => null)
 
-    if (!res.ok && res.status !== 202) {
-      const text = data?.message || (await res.text())
-      throw new Error(text || `HTTP ${res.status}`)
+    if (!res.ok) {
+      const message = data?.message || `Gagal memuat data proyeksi (${res.status})`
+      throw new Error(message)
     }
 
-    const list = data?.prediction
-    const firstPrediction = Array.isArray(list)
-      ? list[2]?.predicted_price ?? list[2]
-      : data?.prediction ?? data?.value ?? null
+    const prediction = data?.data ?? data ?? {}
+    const rawValue =
+      prediction?.harga_prediksi ??
+      prediction?.hargaPrediksi ??
+      prediction?.harga_prediksi_idr ??
+      null
 
-    if (typeof firstPrediction === 'number' && !Number.isNaN(firstPrediction)) {
-      projectionValue.value = firstPrediction
-      projectionError.value = ''
-      projectionNote.value = res.status === 202 ? (data?.message || '') : ''
-    } else {
+    const parsedValue = rawValue != null ? Number.parseFloat(rawValue) : Number.NaN
+
+    if (!Number.isFinite(parsedValue)) {
       throw new Error('Nilai prediksi tidak ditemukan')
     }
+
+    projectionValue.value = parsedValue
+    projectionError.value = ''
   } catch (error) {
     console.error('Fetch proyeksi gagal:', error)
     projectionError.value = String(error.message || error)

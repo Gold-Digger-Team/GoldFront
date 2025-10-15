@@ -23,7 +23,7 @@
       <!-- Logo Card with Animation -->
       <div class="text-center mb-8 animate-fade-in-down">
         <div class="inline-block bg-white rounded-2xl p-4 shadow-lg mb-4 transform hover:scale-110 transition-transform duration-300">
-          <img src="/src/assets/BSI (Bank Syariah Indonesia) Logo.png" class="h-12 w-auto" alt="Bank Syariah Indonesia" />
+          <img src="/assets/bsi-logo.png" class="h-12 w-auto" alt="Bank Syariah Indonesia" />
         </div>
         <h1 class="text-3xl font-bold text-white mb-2 animate-pulse-slow">Admin Portal</h1>
         <p class="text-white/80">Masuk untuk mengelola sistem</p>

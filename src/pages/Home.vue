@@ -6,7 +6,7 @@
         <!-- Logo -->
         <div class="flex items-center">
           <router-link to="/" aria-label="Beranda" class="inline-block">
-            <img src="/src/assets/BSI (Bank Syariah Indonesia) Logo.png" class="h-10 w-auto" alt="Bank Syariah Indonesia" />
+            <img src="/assets/bsi-logo.png" class="h-10 w-auto" alt="Bank Syariah Indonesia" />
           </router-link>
         </div>
 
@@ -159,8 +159,8 @@ import BukaCicilEmas from './BukaCicilEmas.vue'
 
 // Banner slider setup
 const banners = [
-  { src: '/src/assets/banner1.svg', alt: 'Banner 1' },
-  { src: '/src/assets/banner2.svg', alt: 'Banner 2' }
+  { src: '/assets/banner1.svg', alt: 'Banner 1' },
+  { src: '/assets/banner2.svg', alt: 'Banner 2' }
 ]
 const currentBannerIndex = ref(0)
 let bannerInterval = null

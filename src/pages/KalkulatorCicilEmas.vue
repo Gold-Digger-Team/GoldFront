@@ -155,8 +155,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-
-const API_BASE = 'http://192.168.23.22:3001'
+import { apiFetch } from '@/services/apiClient'
 
 // Income & Expense
 const income = ref(0)
@@ -260,9 +259,8 @@ const csrfToken = ref(null)
 const ensureCsrfToken = async () => {
   if (csrfToken.value) return csrfToken.value
   try {
-    const res = await fetch(`${API_BASE}/csrf-token`, {
-      method: 'GET',
-      credentials: 'include'
+    const res = await apiFetch('/csrf-token', {
+      method: 'GET'
     })
     if (!res.ok) throw new Error(`CSRF token request failed (${res.status})`)
     const data = await res.json().catch(() => ({}))
@@ -292,9 +290,8 @@ const fetchRecommendations = async () => {
       throw new Error('Gagal mendapatkan CSRF token')
     }
 
-    const response = await fetch(`${API_BASE}/api/rekomendasi`, {
+    const response = await apiFetch('/api/rekomendasi', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': token

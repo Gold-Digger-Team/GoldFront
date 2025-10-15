@@ -296,6 +296,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch, onMounted } from 'vue'
+import { apiFetch } from '@/services/apiClient'
 
 // State for gold price from API
 const goldPricePerGram = ref(0)
@@ -345,9 +346,8 @@ async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
     if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://192.168.23.22:3001/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
+      const tokenRes = await apiFetch('/csrf-token', {
+        method: 'GET'
       })
 
       if (!tokenRes.ok) {
@@ -366,9 +366,8 @@ async function fetchGoldPrice() {
       }
     }
 
-    const response = await fetch('http://192.168.23.22:3001/api/emas/today', {
+    const response = await apiFetch('/api/emas/today', {
       method: 'GET',
-      credentials: 'include',
       headers: {
         'X-CSRF-Token': priceCsrfToken.value
       }
@@ -524,9 +523,8 @@ const formatNumber = (n) =>
 
 const ensureSimulationCsrf = async () => {
   if (simulationCsrfToken.value) return simulationCsrfToken.value
-  const res = await fetch('http://192.168.23.22:3001/csrf-token', {
-    method: 'GET',
-    credentials: 'include'
+  const res = await apiFetch('/csrf-token', {
+    method: 'GET'
   })
   if (!res.ok) {
     throw new Error(`CSRF request failed: ${res.status}`)
@@ -559,9 +557,8 @@ const fetchSimulation = async () => {
       dp_pct: dpNominalBase.value
     }
 
-    const res = await fetch('http://192.168.23.22:3001/api/simulasi/simulasi-cilem', {
+    const res = await apiFetch('/api/simulasi/simulasi-cilem', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': token

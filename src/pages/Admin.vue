@@ -347,8 +347,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-const API_BASE = 'http://192.168.23.22:3001'
+import { apiFetch } from '@/services/apiClient'
 
 const router = useRouter()
 
@@ -366,9 +365,8 @@ const sortDir = ref('desc')
 
 const getCsrfToken = async () => {
   try {
-    const res = await fetch(`${API_BASE}/csrf-token`, {
-      method: 'GET',
-      credentials: 'include'
+    const res = await apiFetch('/csrf-token', {
+      method: 'GET'
     })
 
     if (!res.ok) {
@@ -393,8 +391,7 @@ const fetchForms = async () => {
       throw new Error('CSRF token tidak ditemukan')
     }
 
-    const response = await fetch(`${API_BASE}/api/forms`, {
-      credentials: 'include',
+    const response = await apiFetch('/api/forms', {
       headers: {
         'X-CSRF-Token': csrfToken
       }
@@ -563,12 +560,11 @@ const handleLogout = async () => {
   try {
     const csrfToken = await getCsrfToken()
     if (csrfToken) {
-      await fetch(`${API_BASE}/api/admin/logout`, {
+      await apiFetch('/api/admin/logout', {
         method: 'POST',
         headers: {
           'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include'
+        }
       })
     }
   } catch (err) {
@@ -583,9 +579,7 @@ const handleLogout = async () => {
 
 const checkAuth = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/me`, {
-      credentials: 'include'
-    })
+    const res = await apiFetch('/api/admin/me')
 
     if (!res.ok) {
       router.push('/login')

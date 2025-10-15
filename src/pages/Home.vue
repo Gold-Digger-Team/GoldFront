@@ -148,6 +148,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { apiFetch, predictionApiFetch } from '@/services/apiClient'
 import BSIGoldHero from '../components/BSIGoldHero.vue'
 import InfoCard from '../components/sections/InfoCard.vue'
 import SidebarMenu from '../components/sections/SidebarMenu.vue'
@@ -277,9 +278,8 @@ const ensurePriceCsrfToken = async () => {
   const endpoints = ['csrf-token']
   for (const endpoint of endpoints) {
     try {
-      const tokenRes = await fetch(`http://192.168.23.22:3001/${endpoint}`, {
-        method: 'GET',
-        credentials: 'include'
+      const tokenRes = await apiFetch(endpoint, {
+        method: 'GET'
       })
       if (!tokenRes.ok) {
         continue
@@ -310,9 +310,8 @@ const fetchGoldPrice = async () => {
   try {
     const token = await ensurePriceCsrfToken()
 
-    const priceRes = await fetch('http://192.168.23.22:3001/api/emas/today', {
+    const priceRes = await apiFetch('/api/emas/today', {
       method: 'GET',
-      credentials: 'include',
       headers: token
         ? {
             'X-CSRF-Token': token
@@ -342,7 +341,7 @@ const fetchProjection = async () => {
   projectionNote.value = ''
 
   try {
-    const res = await fetch('http://192.168.23.22:5001/predict', {
+    const res = await predictionApiFetch('/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -385,9 +384,8 @@ const fetchHistoricalYoy = async () => {
   try {
     const token = await ensurePriceCsrfToken()
 
-    const res = await fetch('http://192.168.23.22:3001/api/emas?page=1&pageSize=400', {
+    const res = await apiFetch('/api/emas?page=1&pageSize=400', {
       method: 'GET',
-      credentials: 'include',
       headers: token ? { 'X-CSRF-Token': token } : undefined
     })
 

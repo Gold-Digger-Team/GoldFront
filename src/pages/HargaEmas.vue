@@ -136,6 +136,7 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
+import { apiFetch } from '@/services/apiClient'
 
 const chartMode = ref('historis')
 
@@ -269,7 +270,7 @@ async function fetchGoldPriceData() {
 
     // Fetch all pages
     while (currentPage <= totalPages) {
-      const response = await fetch(`http://192.168.23.22:3001/api/emas?page=${currentPage}&pageSize=100`, {
+      const response = await apiFetch(`/api/emas?page=${currentPage}&pageSize=100`, {
         method: 'GET'
       })
 

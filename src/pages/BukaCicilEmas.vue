@@ -363,6 +363,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch, onMounted } from 'vue'
+import { apiFetch } from '@/services/apiClient'
 
 // State for gold price from API
 const goldPricePerGram = ref(0)
@@ -425,9 +426,8 @@ async function fetchGoldPrice() {
   isLoadingPrice.value = true
   try {
     if (!priceCsrfToken.value) {
-      const tokenRes = await fetch('http://192.168.23.22:3001/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
+      const tokenRes = await apiFetch('/csrf-token', {
+        method: 'GET'
       })
       if (!tokenRes.ok) {
         throw new Error(`Failed to fetch CSRF token: ${tokenRes.status}`)
@@ -443,9 +443,8 @@ async function fetchGoldPrice() {
       }
     }
 
-    const response = await fetch('http://192.168.23.22:3001/api/emas/today', {
+    const response = await apiFetch('/api/emas/today', {
       method: 'GET',
-      credentials: 'include',
       headers: {
         'X-CSRF-Token': priceCsrfToken.value
       }
@@ -544,9 +543,8 @@ const formattedTotalPriceClass = computed(() => {
 // Functions
 async function getCsrfToken() {
   try {
-    const response = await fetch('http://192.168.23.22:3001/csrf-token', {
-      method: 'GET',
-      credentials: 'include'
+    const response = await apiFetch('/csrf-token', {
+      method: 'GET'
     })
 
     if (!response.ok) {
@@ -593,9 +591,8 @@ async function fetchPreview() {
       dp_pct: dpPct.value
     }
 
-    const response = await fetch('http://192.168.23.22:3001/api/forms/preview', {
+    const response = await apiFetch('/api/forms/preview', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken.value
@@ -727,9 +724,8 @@ const handleSubmit = async () => {
       }))
     }
 
-    const res = await fetch('http://192.168.23.22:3001/api/forms', {
+    const res = await apiFetch('/api/forms', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken.value

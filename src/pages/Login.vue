@@ -182,6 +182,7 @@ const handleLogin = async () => {
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken,
+        'Access-Control-Allow-Credentials': 'true',
       },
       body: JSON.stringify({
         username: username.value,

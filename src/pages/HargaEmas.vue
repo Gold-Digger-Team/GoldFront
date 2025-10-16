@@ -67,9 +67,19 @@
           <h4 class="text-sm font-semibold text-amber-900">📈 Proyeksi Tahunan</h4>
           <p class="mt-2 text-xs text-amber-700">Perkiraan harga emas berdasarkan model prediksi internal.</p>
           <div class="mt-3 space-y-2">
-            <div v-for="proj in annualProjections" :key="proj.year" class="flex items-center justify-between text-xs">
-              <span class="text-amber-700">{{ proj.year }}</span>
-              <span class="font-semibold text-amber-900">{{ proj.price }}</span>
+            <div v-for="proj in annualProjections" :key="proj.year" class="flex items-center justify-between gap-3 text-xs">
+              <span class="font-semibold text-amber-700">{{ proj.year }}</span>
+              <span class="font-bold text-amber-900">{{ proj.price }}</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold min-w-[60px] justify-center"
+                    :class="proj.growthPercent >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                <svg v-if="proj.growthPercent >= 0" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"></path>
+                </svg>
+                <svg v-else class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
+                </svg>
+                {{ proj.growthPercent >= 0 ? '+' : '' }}{{ proj.growthPercent.toFixed(1) }}%
+              </span>
             </div>
           </div>
         </div>
@@ -125,10 +135,19 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { apiFetch } from '@/services/apiClient'
 
+// Track displayed years for projection mode
+const displayedYears = new Map()
+
 const chartMode = ref('historis')
+
+// Watch untuk reset displayedYears ketika mode berubah
+watch(chartMode, () => {
+  displayedYears.clear()
+  console.log('🔄 Chart mode changed to:', chartMode.value, '- Cleared displayed years')
+})
 
 // API data state
 const apiData = ref([])
@@ -199,57 +218,60 @@ const toSeriesData = (categories, values) =>
 
 const formatAxisLabel = (value) => {
   const date = new Date(Number(value))
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) {
+    console.log('⚠️ Invalid date for value:', value)
+    return ''
+  }
+
+  const month = date.getMonth()
+  const year = date.getFullYear()
 
   if (chartMode.value === 'proyeksi') {
-    // For projection mode, show year only at January (month 0) or the first month of each year
-    const month = date.getMonth()
-    const year = date.getFullYear()
-
-    // Show label only for January to avoid duplicates
-    if (month === 0) {
+    // Tampilkan label tahun pertama kali muncul atau di bulan Januari
+    if (!displayedYears.has(year)) {
+      displayedYears.set(year, true)
+      console.log('✅ Proyeksi - First occurrence of year:', year, 'at month:', month)
       return year.toString()
     }
-    // Also show for other significant months to ensure visibility
+    // Atau tampilkan di mid-year (Juli)
     if (month === 6) {
+      console.log('✅ Proyeksi - Mid year label:', `Mid ${year}`)
       return `Mid ${year}`
     }
+    console.log('⏭️ Proyeksi - Skipping month:', month, 'year:', year)
     return ''
   }
 
   const duration = timeframeDurations[selectedTimeframe.value]
 
-  // For 1 year, show month-year
+  // For 1 year, show every 2 months
   if (duration === 12) {
-    // Show every 2 months to avoid overcrowding
-    if (date.getMonth() % 2 === 0) {
-      return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
+    if (month % 2 === 0) {
+      return `${monthLabels[month]}\n${year}`
     }
     return ''
   }
 
-  // For 3 years, show quarter-year
+  // For 3 years, show quarterly
   if (duration === 36) {
-    // Show every quarter
-    if (date.getMonth() % 3 === 0) {
-      return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
+    if (month % 3 === 0) {
+      return `${monthLabels[month]}\n${year}`
     }
     return ''
   }
 
-  // For 5 years, show half year
+  // For 5 years, show half-yearly
   if (duration === 60) {
-    // Show every 6 months
-    if (date.getMonth() % 6 === 0) {
-      return `${monthLabels[date.getMonth()]}\n${date.getFullYear()}`
+    if (month % 6 === 0) {
+      return `${monthLabels[month]}\n${year}`
     }
     return ''
   }
 
   // For ALL, show yearly
   if (!duration) {
-    if (date.getMonth() === 0) {
-      return date.getFullYear().toString()
+    if (month === 0) {
+      return year.toString()
     }
     return ''
   }
@@ -393,9 +415,16 @@ async function fetchPredictionData() {
 }
 
 // Fetch data on component mount
-onMounted(() => {
-  fetchGoldPriceData()
-  fetchPredictionData()
+onMounted(async () => {
+  console.log('🚀 HargaEmas Component Mounted')
+  console.log('🔍 Initial chartMode:', chartMode.value)
+
+  await fetchGoldPriceData()
+  await fetchPredictionData()
+
+  console.log('✅ Data loading completed')
+  console.log('📊 API Data Count:', apiData.value.length)
+  console.log('📈 Prediction Data Count:', predictionData.value.length)
 })
 
 // Get the last historical price for projection baseline
@@ -438,9 +467,13 @@ const projectionControlPoints = computed(() => {
   ]
 })
 
-const projectionTimeline = computed(() =>
-  buildMonthlyTimeline(projectionControlPoints.value)
-)
+const projectionTimeline = computed(() => {
+  const timeline = buildMonthlyTimeline(projectionControlPoints.value)
+  console.log('📊 Projection Timeline Categories:', timeline.categories)
+  console.log('📊 First 5 categories:', timeline.categories.slice(0, 5))
+  console.log('📊 Last 5 categories:', timeline.categories.slice(-5))
+  return timeline
+})
 
 const projectionSeries = computed(() =>
   toSeriesData(
@@ -636,6 +669,12 @@ const chartOptions = computed(() => {
   const highlightIndex = primaryData.findIndex((point) => point.x === highlightX)
   const padding = Math.max(120_000, Math.round((max - min) * 0.12))
 
+  console.log('📈 Chart Options - Mode:', mode)
+  console.log('📈 Chart Options - Primary Data Length:', primaryData.length)
+  console.log('📈 Chart Options - First Data Point:', primaryData[0])
+  console.log('📈 Chart Options - Last Data Point:', primaryData[primaryData.length - 1])
+  console.log('📈 Chart Options - Highlight Index:', highlightIndex)
+
   // Build annotations for key points
   const annotations = {
     points: []
@@ -672,18 +711,74 @@ const chartOptions = computed(() => {
     })
   }
 
+  console.log('🔧 Building chartOptions for mode:', mode)
+
+  // Custom tooltip untuk mode proyeksi dengan persentase dan warna
+  const customTooltip = mode === 'proyeksi' ? {
+    shared: true,
+    intersect: false,
+    theme: 'light',
+    style: {
+      fontSize: '13px',
+      fontFamily: 'inherit'
+    },
+    x: {
+      formatter: formatTooltipLabel
+    },
+    custom: function({ series, seriesIndex, dataPointIndex, w }) {
+      const value = series[seriesIndex][dataPointIndex]
+      const date = w.globals.seriesX[seriesIndex][dataPointIndex]
+      const dateLabel = formatTooltipLabel(date)
+
+      const formattedPrice = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+      }).format(value)
+
+      // Hitung persentase dari harga pertama (historis terakhir)
+      const firstValue = lastHistoricalPrice.value
+      const growthPercent = firstValue > 0 ? ((value - firstValue) / firstValue) * 100 : 0
+
+      let percentHtml = ''
+      if (growthPercent !== 0) {
+        const sign = growthPercent > 0 ? '+' : ''
+        const percentText = `${sign}${growthPercent.toFixed(1)}%`
+        const color = growthPercent > 0 ? '#16a34a' : '#dc2626' // green-600 : red-600
+        const bgColor = growthPercent > 0 ? '#dcfce7' : '#fee2e2' // green-100 : red-100
+        const arrow = growthPercent > 0 ? '↑' : '↓'
+
+        percentHtml = `<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 6px; background-color: ${bgColor}; color: ${color}; font-weight: 700; font-size: 12px;">${arrow} ${percentText}</span>`
+      }
+
+      return `
+        <div style="padding: 10px 12px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 6px; font-weight: 600;">${dateLabel}</div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="font-weight: 700; color: #334155; font-size: 14px;">${formattedPrice}</span>
+            ${percentHtml}
+          </div>
+        </div>
+      `
+    },
+    marker: {
+      show: true
+    }
+  } : baseChartOptions.tooltip
+
   return {
     ...baseChartOptions,
     xaxis: {
       ...baseChartOptions.xaxis,
-      // Add tickAmount for projection mode to force showing more labels
       ...(mode === 'proyeksi' && {
-        tickAmount: 'dataPoints',
         labels: {
           ...baseChartOptions.xaxis.labels,
           show: true,
-          showDuplicates: false,
-          minHeight: 60
+          formatter: formatAxisLabel,
+          rotate: -45,
+          rotateAlways: true,
+          hideOverlappingLabels: false,
+          trim: false
         }
       })
     },
@@ -692,6 +787,7 @@ const chartOptions = computed(() => {
       min: Math.max(0, min - padding),
       max: max + padding
     },
+    tooltip: customTooltip,
     markers: {
       ...baseChartOptions.markers,
       discrete:
@@ -826,12 +922,30 @@ const priceInfoTable = computed(() => {
   return intervals
 })
 
-// Projection list for display
+// Projection list for display with growth percentage
 const annualProjections = computed(() => {
   const points = projectionControlPoints.value
-  return points.slice(1).map((point) => ({
-    year: point.date.getFullYear(),
-    price: formatCurrency(point.value)
-  }))
+  const basePrice = points[0]?.value || 0
+
+  console.log('📊 Annual Projections - Base Price:', formatCurrency(basePrice))
+  console.log('📊 Projection Control Points:', points)
+
+  const projections = points.slice(1).map((point, index) => {
+    const prevPrice = index === 0 ? basePrice : points[index].value
+    const growthPercent = prevPrice > 0 ? ((point.value - prevPrice) / prevPrice) * 100 : 0
+
+    console.log(`📈 Year ${point.date.getFullYear()}: ${formatCurrency(point.value)} (${growthPercent >= 0 ? '+' : ''}${growthPercent.toFixed(1)}%)`)
+
+    return {
+      year: point.date.getFullYear(),
+      price: formatCurrency(point.value),
+      rawValue: point.value,
+      growthPercent: growthPercent
+    }
+  })
+
+  console.log('✅ Final Annual Projections:', projections)
+
+  return projections
 })
 </script>

@@ -23,7 +23,7 @@
         <!-- Content slide with text and image -->
         <article
           v-else
-          class="flex h-full min-h-[460px] w-full items-center bg-gradient-to-br from-[#0d7377] via-[#14919b] to-[#0d7377] px-6 py-12 sm:px-8 md:px-12 lg:px-16"
+          class="flex h-full min-h-[460px] w-full items-center bg-gradient-to-br from-[#0d7377] via-[#14919b] to-[#0d7377] px-6 py-12 pb-20 sm:px-8 md:px-12 lg:px-16"
         >
           <div class="flex h-full w-full flex-col-reverse items-center gap-8 md:flex-row md:items-center md:gap-10 lg:gap-16">
             <!-- Image Section -->
@@ -41,7 +41,7 @@
             </figure>
 
             <!-- Content Section -->
-            <div class="flex-1 space-y-5 text-left text-white">
+            <div class="flex-1 space-y-5 text-left text-white pb-4">
               <!-- Subtitle Badge -->
               <div class="inline-flex items-center gap-2 rounded-full bg-teal-500/20 px-4 py-1.5 backdrop-blur-sm">
                 <div class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></div>

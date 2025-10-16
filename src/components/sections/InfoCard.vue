@@ -1,15 +1,27 @@
 <!-- src/components/sections/InfoCard.vue -->
 <template>
   <article
-    class="rounded-xl border-3 p-4 shadow-sm transition-all duration-300 hover:shadow-md"
+    class="relative rounded-xl border-3 p-4 shadow-sm transition-all duration-500 hover:shadow-2xl hover:scale-105 hover:-translate-y-2 overflow-hidden group cursor-pointer"
     :class="cardStyles"
   >
+    <!-- Animated background particles on hover -->
+    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+      <div class="particle particle-1" :class="particleColor"></div>
+      <div class="particle particle-2" :class="particleColor"></div>
+      <div class="particle particle-3" :class="particleColor"></div>
+      <div class="particle particle-4" :class="particleColor"></div>
+      <div class="particle particle-5" :class="particleColor"></div>
+    </div>
+
+    <!-- Gradient overlay on hover -->
+    <div class="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-radial from-white to-transparent"></div>
+
     <!-- Content Wrapper with Flexbox -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 relative z-10">
       <!-- Icon -->
       <div
-        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
-        :class="[iconBgColor, iconAnimationClass]"
+        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all duration-500 group-hover:scale-125 group-hover:rotate-12"
+        :class="iconBgColor"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -17,7 +29,7 @@
           viewBox="0 0 24 24"
           stroke-width="2.5"
           stroke="currentColor"
-          class="h-5 w-5 info-card__icon-svg"
+          class="h-5 w-5 transition-transform duration-500 group-hover:rotate-[-12deg]"
           :class="iconColor"
           v-html="iconPath"
         />
@@ -26,20 +38,27 @@
       <!-- Text Content -->
       <div class="flex-1 min-w-0">
         <!-- Title -->
-        <h3 class="text-xs font-semibold md:text-sm" :class="titleColor">
+        <h3 class="text-xs font-semibold md:text-sm transition-all duration-300 group-hover:scale-105" :class="titleColor">
           {{ title }}
         </h3>
 
         <!-- Value -->
-        <p class="mt-0.5 text-base font-bold md:text-lg truncate" :class="valueColor">
+        <p class="mt-0.5 text-base font-bold md:text-lg truncate transition-all duration-300 group-hover:scale-110 group-hover:font-extrabold" :class="valueColor">
           {{ value }}
         </p>
 
         <!-- Subtitle (optional) -->
-        <p v-if="subtitle" class="mt-0.5 text-[10px] md:text-xs font-medium" :class="subtitleColor">
+        <p v-if="subtitle" class="mt-0.5 text-[10px] md:text-xs font-medium transition-all duration-300 group-hover:scale-105" :class="subtitleColor">
           {{ subtitle }}
         </p>
       </div>
+    </div>
+
+    <!-- Sparkle effect on hover -->
+    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      <svg class="w-4 h-4 animate-spin-slow" :class="iconColor" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+      </svg>
     </div>
   </article>
 </template>
@@ -99,15 +118,6 @@ const iconBgColor = computed(() => {
   return colors[props.type] || colors.default
 })
 
-const iconAnimationClass = computed(() => {
-  const animations = {
-    price: 'info-card__icon--float',
-    projection: 'info-card__icon--pulse',
-    growth: 'info-card__icon--bounce',
-    default: 'info-card__icon--twirl'
-  }
-  return animations[props.type] || animations.default
-})
 
 const iconColor = computed(() => {
   const colors = {
@@ -166,94 +176,98 @@ const subtitleColor = computed(() => {
   }
   return colors[props.type] || colors.default
 })
+
+const particleColor = computed(() => {
+  const colors = {
+    price: 'bg-yellow-400',
+    projection: 'bg-purple-400',
+    growth: 'bg-gray-400',
+    default: 'bg-slate-400'
+  }
+  return colors[props.type] || colors.default
+})
 </script>
 
 <style scoped>
-.info-card__icon--float {
-  animation: info-card-float 3s ease-in-out infinite;
-  will-change: transform;
+/* Particle animations - hanya untuk hover */
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0.6;
 }
 
-.info-card__icon--pulse {
-  animation: info-card-pulse 2.6s ease-in-out infinite;
-  will-change: transform;
+.particle-1 {
+  top: 20%;
+  left: 10%;
+  animation: float-particle 3s ease-in-out infinite;
 }
 
-.info-card__icon--bounce {
-  animation: info-card-bounce 2.2s ease-in-out infinite;
-  will-change: transform;
+.particle-2 {
+  top: 60%;
+  left: 80%;
+  animation: float-particle 2.5s ease-in-out infinite 0.5s;
 }
 
-.info-card__icon--twirl {
-  animation: info-card-twirl 4s ease-in-out infinite;
-  will-change: transform;
+.particle-3 {
+  top: 80%;
+  left: 20%;
+  animation: float-particle 3.2s ease-in-out infinite 1s;
 }
 
-.info-card__icon-svg {
-  animation: info-card-glow 3s ease-in-out infinite;
+.particle-4 {
+  top: 40%;
+  left: 60%;
+  animation: float-particle 2.8s ease-in-out infinite 0.3s;
 }
 
-@keyframes info-card-float {
-  0%,
-  100% {
-    transform: translateY(0);
+.particle-5 {
+  top: 15%;
+  left: 90%;
+  animation: float-particle 3.5s ease-in-out infinite 0.8s;
+}
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translate(10px, -15px) scale(1.2);
+    opacity: 0.8;
   }
   50% {
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes info-card-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  45% {
-    transform: scale(1.08);
-  }
-  70% {
-    transform: scale(0.97);
-  }
-}
-
-@keyframes info-card-bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-6px);
-  }
-  55% {
-    transform: translateY(0);
+    transform: translate(-5px, -25px) scale(0.8);
+    opacity: 0.4;
   }
   75% {
-    transform: translateY(-3px);
+    transform: translate(15px, -10px) scale(1.1);
+    opacity: 0.7;
   }
 }
 
-@keyframes info-card-twirl {
-  0% {
-    transform: rotate(0deg) scale(1);
+/* Slow spin animation for sparkle */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
   }
-  40% {
-    transform: rotate(8deg) scale(1.05);
-  }
-  60% {
-    transform: rotate(-6deg) scale(0.98);
-  }
-  100% {
-    transform: rotate(0deg) scale(1);
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@keyframes info-card-glow {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0.15));
-  }
-  50% {
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6));
-  }
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
+}
+
+/* Gradient radial utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle at center, var(--tw-gradient-stops));
+}
+
+/* Hover lift effect */
+article:hover {
+  transform: translateY(-8px) scale(1.05);
 }
 </style>
